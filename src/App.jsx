@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import './App.css';
+import ThreeCanvas from './components/3DScene';
 
 const shapeOptions = [
   'BoxGeometry',
@@ -17,9 +18,8 @@ function App() {
 
   return (
     <div className="app">
-
       <div className="left-panel">
-        
+        <ThreeCanvas />
       </div>
 
       <div className="right-panel">
@@ -30,6 +30,13 @@ function App() {
               {shape.replace('Geometry', '')}
             </button>
           ))}
+        </div>
+        <div style={{height: '20px'}} />
+        <h2>Object Manipulation</h2>
+        <div className='grid'>
+          <button>Move</button>
+          <button>Rotate</button>
+          <button>Delete</button>
         </div>
       </div>
     </div>
