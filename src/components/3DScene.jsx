@@ -1,5 +1,5 @@
 import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls, Stats } from '@react-three/drei';
 import * as THREE from 'three';
 import ShapeFactory from './ShapeFactory';
 
@@ -25,27 +25,28 @@ const ThreeCanvas = (props) => {
   return (
     <Canvas
       camera={{ 
-        position: [0, 0, 10], 
+        position: [0, 5, 10], 
         fov: 50, 
         near: 0.1,
         far: 1000,
       }}
-      
+      shadows
       onCreated={({ scene }) => {
         scene.background = new THREE.Color('#FAF9F6');
       }}
     >
-      <ambientLight intensity={0.5} />
-      <spotLight 
-        position={[-5, 10, 5]} 
-        angle={0.3} 
-        penumbra={1} 
-        intensity={1.2} 
+      <ambientLight intensity={0.9} /> 
+      <directionalLight 
         castShadow
-        color="#FFE5B4"
-        />
+        position={[0, 0, 10]} 
+        intensity={0.7} 
+        color={'#b7a5ff'} 
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
+      />
       {props.selectedShape && <ShapeFactory type={props.selectedShape} />}
       <OrbitControls />
+      <Stats />
     </Canvas>
   );
 };

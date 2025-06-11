@@ -2,7 +2,12 @@ import * as THREE from 'three';
 
 const ShapeFactory = ({ type }) => {
   let geometry = null;
-  const material = <meshLambertMaterial color={'#F28482'} emissive={'#F6BD60'} emissiveIntensity={0.7} side={THREE.DoubleSide}
+  const material = <meshLambertMaterial 
+    color={'#F28482'} 
+    emissive={'#F6BD60'} 
+    emissiveIntensity={0.7}
+    side={THREE.DoubleSide}
+    flatShading={true}
   />;
 
   switch (type) {
