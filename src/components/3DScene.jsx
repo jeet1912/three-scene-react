@@ -1,14 +1,7 @@
 import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
-import { useState, useEffect } from 'react';
-
-const BasicCube = () => (
-  <mesh position={[0, 0, 0]}>
-    <boxGeometry args={[1, 1, 1]} />
-    <meshStandardMaterial color="skyblue" />
-  </mesh>
-);
+import ShapeFactory from './ShapeFactory';
 
 /*
 function CameraAdjuster() {
@@ -28,7 +21,7 @@ function CameraAdjuster() {
 }
 */
 
-const ThreeCanvas = () => {
+const ThreeCanvas = (props) => {
   return (
     <Canvas
       camera={{ 
@@ -43,7 +36,7 @@ const ThreeCanvas = () => {
       }}
     >
       <ambientLight intensity={0.5} />
-      <BasicCube />
+      {props.selectedShape && <ShapeFactory type={props.selectedShape} />}
       <OrbitControls />
     </Canvas>
   );

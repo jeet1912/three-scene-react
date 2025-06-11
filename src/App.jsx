@@ -19,7 +19,7 @@ function App() {
   return (
     <div className="app">
       <div className="left-panel">
-        <ThreeCanvas />
+        <ThreeCanvas selectedShape={selectedShape}/>
       </div>
 
       <div className="right-panel">

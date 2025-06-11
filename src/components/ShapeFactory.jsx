@@ -1,6 +1,6 @@
 const ShapeFactory = ({ type }) => {
   let geometry = null;
-  const material = <meshStandardMaterial color="#69b3f9" />;
+  const material = <meshLambertMaterial  />;
 
   switch (type) {
     case 'BoxGeometry':
