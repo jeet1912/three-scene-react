@@ -63,7 +63,7 @@ const SceneManager = ({ shapes, selectedId, setSelectedId }) => {
 const ThreeCanvas = ({ shapes, selectedId, setSelectedId }) => {
   return (
     <Canvas
-      camera={{ position: [3, 5, 10], fov: 50, near: 0.1, far: 1000 }}
+      camera={{ position: [0, 5, 10], fov: 50, near: 0.1, far: 1000 }}
       shadows
       onCreated={({ scene }) => {
         scene.background = new THREE.Color('#FAF9F6');
@@ -78,13 +78,11 @@ const ThreeCanvas = ({ shapes, selectedId, setSelectedId }) => {
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
       />
-
       <SceneManager
         shapes={shapes}
         selectedId={selectedId}
         setSelectedId={setSelectedId}
       />
-
       <OrbitControls />
       <Stats />
     </Canvas>
