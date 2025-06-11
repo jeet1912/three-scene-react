@@ -1,48 +1,50 @@
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Stats } from '@react-three/drei';
-import { useRef, useCallback } from 'react';
+import { useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import ShapeFactory from './ShapeFactory';
 
 const SceneManager = ({ shapes, selectedId, setSelectedId }) => {
   const raycaster = useRef(new THREE.Raycaster());
-  const { camera, mouse, gl } = useThree();
+  const { camera, gl } = useThree();
   const shapesRef = useRef([]);
 
   // ✨ Clear old refs before render to avoid stale/null refs
   shapesRef.current = [];
 
-  const handlePointerDown = useCallback((event) => {
-    const bounds = gl.domElement.getBoundingClientRect();
-    const x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
-    const y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
-    const pointer = new THREE.Vector2(x, y);
+  useEffect(() => {
+    const handlePointerDown = (event) => {
+      const bounds = gl.domElement.getBoundingClientRect();
+      const x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
+      const y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
+      const pointer = new THREE.Vector2(x, y);
 
-    raycaster.current.setFromCamera(pointer, camera);
+      raycaster.current.setFromCamera(pointer, camera);
 
-    // ✨ Filter out nulls to avoid "object.layers" TypeError
-    const validRefs = shapesRef.current.filter(Boolean);
-    const intersects = raycaster.current.intersectObjects(validRefs, true);
+      // ✨ Filter out nulls
+      const validRefs = shapesRef.current.filter(Boolean);
+      const intersects = raycaster.current.intersectObjects(validRefs, true);
 
-    if (intersects.length > 0) {
-      const selectedUUID = intersects[0].object.uuid;
+      if (intersects.length > 0) {
+        const selectedUUID = intersects[0].object.uuid;
 
-      // ✅ Find matching shape by comparing UUIDs of refs
-      for (let i = 0; i < validRefs.length; i++) {
-        if (validRefs[i]?.uuid === selectedUUID) {
-          setSelectedId(shapes[i].id); // match to original shape
-          return;
+        // ✅ Find matching shape by UUID
+        for (let i = 0; i < validRefs.length; i++) {
+          if (validRefs[i]?.uuid === selectedUUID) {
+            setSelectedId(shapes[i].id);
+            return;
+          }
         }
       }
-      setSelectedId(null); // fallback
-    } else {
       setSelectedId(null);
-    }
-  }, [camera, gl.domElement, shapes, setSelectedId]);
+    };
 
+    gl.domElement.addEventListener('pointerdown', handlePointerDown);
+    return () => gl.domElement.removeEventListener('pointerdown', handlePointerDown);
+  }, [camera, gl, shapes, setSelectedId]);
 
   return (
-    <group onPointerDown={handlePointerDown}>
+    <group>
       {shapes.map((shape) => (
         <ShapeFactory
           key={shape.id}

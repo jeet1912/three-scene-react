@@ -21,7 +21,7 @@ function App() {
     const newObject = {
       id: Date.now().toString(),
       type,
-      position: [Math.random() * 4 - 2, Math.random() * 4 - 2, 0],
+      position: [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1],
       rotation: [0, 0, 0],
     };
     setObjects(prev => [...prev, newObject]);
