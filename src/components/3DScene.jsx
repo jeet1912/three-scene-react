@@ -36,6 +36,14 @@ const ThreeCanvas = (props) => {
       }}
     >
       <ambientLight intensity={0.5} />
+      <spotLight 
+        position={[-5, 10, 5]} 
+        angle={0.3} 
+        penumbra={1} 
+        intensity={1.2} 
+        castShadow
+        color="#FFE5B4"
+        />
       {props.selectedShape && <ShapeFactory type={props.selectedShape} />}
       <OrbitControls />
     </Canvas>

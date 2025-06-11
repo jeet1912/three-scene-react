@@ -1,6 +1,9 @@
+import * as THREE from 'three';
+
 const ShapeFactory = ({ type }) => {
   let geometry = null;
-  const material = <meshLambertMaterial  />;
+  const material = <meshLambertMaterial color={'#F28482'} emissive={'#F6BD60'} emissiveIntensity={0.7} side={THREE.DoubleSide}
+  />;
 
   switch (type) {
     case 'BoxGeometry':

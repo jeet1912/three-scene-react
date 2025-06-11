@@ -36,7 +36,7 @@ function App() {
         <div className='grid'>
           <button>Move</button>
           <button>Rotate</button>
-          <button>Delete</button>
+          <button onClick={() => setSelectedShape()}>Delete</button>
         </div>
       </div>
     </div>
