@@ -1,0 +1,29 @@
+.app {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+}
+
+.left-panel {
+  flex: 1;
+  position: relative;
+  background: #1e1e1e;
+}
+
+.right-panel {
+  width: 30%;
+  min-width: 250px;
+  background: #f5f5dc;
+  padding: 1rem;
+  box-sizing: border-box;
+  border-left: 2px solid #ccc;
+  overflow-y: auto;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+  margin-top: 1rem;
+}
+
