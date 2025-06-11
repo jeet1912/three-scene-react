@@ -1,50 +1,90 @@
-import { Canvas, useThree } from '@react-three/fiber';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Stats } from '@react-three/drei';
+import { useRef, useCallback } from 'react';
 import * as THREE from 'three';
 import ShapeFactory from './ShapeFactory';
 
-/*
-function CameraAdjuster() {
-  const { camera, gl } = useThree();
-  useEffect(() => {
-    const handleResize = () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      gl.setSize(window.innerWidth, window.innerHeight);
-    };
+const SceneManager = ({ shapes, selectedId, setSelectedId }) => {
+  const raycaster = useRef(new THREE.Raycaster());
+  const { camera, mouse, gl } = useThree();
+  const shapesRef = useRef([]);
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [camera, gl]);
+  // ✨ Clear old refs before render to avoid stale/null refs
+  shapesRef.current = [];
 
-  return null;
-}
-*/
+  const handlePointerDown = useCallback((event) => {
+    const bounds = gl.domElement.getBoundingClientRect();
+    const x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
+    const y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
+    const pointer = new THREE.Vector2(x, y);
 
-const ThreeCanvas = (props) => {
+    raycaster.current.setFromCamera(pointer, camera);
+
+    // ✨ Filter out nulls to avoid "object.layers" TypeError
+    const validRefs = shapesRef.current.filter(Boolean);
+    const intersects = raycaster.current.intersectObjects(validRefs, true);
+
+    if (intersects.length > 0) {
+      const selectedUUID = intersects[0].object.uuid;
+
+      // ✅ Find matching shape by comparing UUIDs of refs
+      for (let i = 0; i < validRefs.length; i++) {
+        if (validRefs[i]?.uuid === selectedUUID) {
+          setSelectedId(shapes[i].id); // match to original shape
+          return;
+        }
+      }
+      setSelectedId(null); // fallback
+    } else {
+      setSelectedId(null);
+    }
+  }, [camera, gl.domElement, shapes, setSelectedId]);
+
+
+  return (
+    <group onPointerDown={handlePointerDown}>
+      {shapes.map((shape) => (
+        <ShapeFactory
+          key={shape.id}
+          ref={(ref) => {
+            if (ref) shapesRef.current.push(ref);
+          }}
+          type={shape.type}
+          position={shape.position}
+          rotation={shape.rotation}
+          isSelected={shape.id === selectedId}
+        />
+      ))}
+    </group>
+  );
+};
+
+
+const ThreeCanvas = ({ shapes, selectedId, setSelectedId }) => {
   return (
     <Canvas
-      camera={{ 
-        position: [0, 5, 10], 
-        fov: 50, 
-        near: 0.1,
-        far: 1000,
-      }}
+      camera={{ position: [3, 5, 10], fov: 50, near: 0.1, far: 1000 }}
       shadows
       onCreated={({ scene }) => {
         scene.background = new THREE.Color('#FAF9F6');
       }}
     >
-      <ambientLight intensity={0.9} /> 
-      <directionalLight 
+      <ambientLight intensity={0.9} />
+      <directionalLight
         castShadow
-        position={[0, 0, 10]} 
-        intensity={0.7} 
-        color={'#b7a5ff'} 
+        position={[0, 0, 10]}
+        intensity={0.7}
+        color={'#b7a5ff'}
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
       />
-      {props.selectedShape && <ShapeFactory type={props.selectedShape} />}
+
+      <SceneManager
+        shapes={shapes}
+        selectedId={selectedId}
+        setSelectedId={setSelectedId}
+      />
+
       <OrbitControls />
       <Stats />
     </Canvas>
@@ -52,4 +92,3 @@ const ThreeCanvas = (props) => {
 };
 
 export default ThreeCanvas;
-
