@@ -36,7 +36,9 @@ const SceneManager = ({ shapes, selectedId, setSelectedId }) => {
           }
         }
       }
-      setSelectedId(null);
+      else {
+        setSelectedId(null);
+      }
     };
 
     gl.domElement.addEventListener('pointerdown', handlePointerDown);
@@ -54,6 +56,7 @@ const SceneManager = ({ shapes, selectedId, setSelectedId }) => {
           type={shape.type}
           position={shape.position}
           rotation={shape.rotation}
+          url={shape.url}
           isSelected={shape.id === selectedId}
         />
       ))}

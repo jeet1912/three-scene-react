@@ -11,18 +11,25 @@ const shapeOptions = [
   'TetrahedronGeometry',
   'OctahedronGeometry',
   'DodecahedronGeometry',
+  'Seashell'
 ];
+
+const gltfUrls = {
+  'Seashell' : '/models/seashell/scene.gltf'
+}
 
 function App() {
   const [objects, setObjects] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
 
   const addShape = (type) => {
+    const isGLTF = ['Seashell', 'Chair'].includes(type);
     const newObject = {
       id: Date.now().toString(),
-      type,
+      type: isGLTF ? 'GLTF' : type,
       position: [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1],
       rotation: [0, 0, 0],
+      url: isGLTF ? gltfUrls[type] : null
     };
     setObjects(prev => [...prev, newObject]);
   };
@@ -79,7 +86,7 @@ function App() {
           ))}
         </div>
 
-        <div style={{ height: '20px' }} />
+        <div style={{ height: '1em' }} />
 
         <h2>Object Manipulation</h2>
         <div className="grid">

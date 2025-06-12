@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { forwardRef } from 'react';
+import { useLoader } from '@react-three/fiber';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 
 /**
  * ShapeFactory component generates a shape mesh from a given type, position, rotation, and material.
@@ -19,9 +21,25 @@ const ShapeFactory = forwardRef((props, ref) => {
     rotation = [0, 0, 0],
     materialProps = {},
     isSelected = false,
+    url = null
   } = props;
 
   let geometry = null;
+
+  if (type === 'GLTF') {
+    if (!url) return null;
+    const gltf = useLoader(GLTFLoader, url);
+    return (
+      <primitive
+        object={gltf.scene}
+        ref={ref}
+        position={position}
+        rotation={rotation}
+        castShadow
+        receiveShadow
+      />
+    );
+  }
 
   switch (type) {
     case 'BoxGeometry':
