@@ -4,19 +4,24 @@ import { useLoader } from '@react-three/fiber';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { useEffect } from 'react';
+
 /**
- * ShapeFactory component generates a shape mesh from a given type, position, rotation, and material.
- * Props:
- * - type: The type of geometry (e.g., 'BoxGeometry', 'SphereGeometry')
- * - position: [x, y, z] position of the shape
- * - rotation: [x, y, z] rotation in radians
- * - materialProps: Material settings for meshLambertMaterial
- * - isSelected: If true, adds visual indication (optional glow effect or outline)
- * - meshRef: Forwarded ref for manipulation
- * - url: URL for GLTF type                                                        
+ * ShapeFactory component renders a 3D mesh or GLTF model based on provided props.
+ * Supports basic geometries (e.g., Box, Sphere) and GLTF models with raycasting and selection highlighting.
+ * 
+ * @param {Object} props - Component props
+ * @param {string} props.type - Geometry type (e.g., 'BoxGeometry', 'SphereGeometry', 'GLTF')
+ * @param {number[]} [props.position=[0, 0, 0]] - Position of the shape [x, y, z]
+ * @param {number[]} [props.rotation=[0, 0, 0]] - Rotation of the shape in radians [x, y, z]
+ * @param {Object} [props.materialProps={}] - Custom material settings for meshLambertMaterial
+ * @param {boolean} [props.isSelected=false] - If true, applies a wireframe highlight to indicate selection
+ * @param {string|null} [props.url=null] - URL for GLTF model (required for type='GLTF')
+ * @param {string} props.shapeId - Unique identifier for the shape, used for raycasting
+ * @param {React.Ref} ref - Forwarded ref for accessing the mesh or group in the parent
  */
 
 function cloneGLTF(gltf) {
+  // Clones a GLTF scene and preserves original materials for each mesh
   const clonedScene = SkeletonUtils.clone(gltf.scene);
   clonedScene.traverse(child => {
     if (child.isMesh) {
@@ -27,19 +32,20 @@ function cloneGLTF(gltf) {
 }
 
 function enableRaycastOnChildren(object, shapeId) {
+  // Configures GLTF scene meshes for raycasting and shadow support, assigning shapeId for selection
   object.traverse(child => {
     if (child.isMesh) {
       child.castShadow = true;
       child.receiveShadow = true;
       child.raycast = THREE.Mesh.prototype.raycast; // Ensures proper raycast support
-      child.userData.selectable = true; // Optional: flag for your selection logic
-      child.userData.shapeId = shapeId;
+      child.userData.selectable = true; // Marks mesh as selectable
+      child.userData.shapeId = shapeId; // Associates mesh with shapeId
     }
   });
 }
 
 const ShapeFactory = forwardRef((props, ref) => {
- const {
+  const {
     type,
     position = [0, 0, 0],
     rotation = [0, 0, 0],
@@ -52,14 +58,16 @@ const ShapeFactory = forwardRef((props, ref) => {
   let geometry = null;
 
   if (type === 'GLTF') {
+    // Handle GLTF model loading and rendering
     if (!url) return null;
     const gltf = useLoader(GLTFLoader, url);
     const cloned = cloneGLTF(gltf);
-    
+
     useEffect(() => {
+      // Enable raycasting and apply selection highlight for GLTF meshes
       enableRaycastOnChildren(cloned, shapeId);
       if (isSelected) {
-        // Apply wireframe material to all meshes in the GLTF scene
+        // Apply wireframe material to all meshes when selected
         cloned.traverse(child => {
           if (child.isMesh) {
             child.material = new THREE.MeshStandardMaterial({
@@ -87,6 +95,7 @@ const ShapeFactory = forwardRef((props, ref) => {
     );
   }
 
+  // Define geometry based on type
   switch (type) {
     case 'BoxGeometry':
       geometry = <boxGeometry args={[1, 1, 1]} />;
@@ -116,6 +125,7 @@ const ShapeFactory = forwardRef((props, ref) => {
       return null;
   }
 
+  // Default material properties for basic geometries
   const defaultMaterial = {
     color: '#F28482',
     emissive: '#F6BD60',
@@ -137,6 +147,7 @@ const ShapeFactory = forwardRef((props, ref) => {
       {geometry}
       <meshLambertMaterial {...defaultMaterial} />
       {isSelected && (
+        // Apply wireframe material for selected basic geometries
         <meshStandardMaterial
           attach="material"
           color="#ffffff"
