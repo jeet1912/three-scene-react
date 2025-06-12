@@ -1,4 +1,4 @@
-import { Canvas, useThree, useFrame } from '@react-three/fiber';
+import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls, Stats } from '@react-three/drei';
 import { useRef, useEffect } from 'react';
 import * as THREE from 'three';
@@ -21,22 +21,34 @@ const SceneManager = ({ shapes, selectedId, setSelectedId }) => {
 
       raycaster.current.setFromCamera(pointer, camera);
 
-      // ✨ Filter out nulls
+      // Filter out nulls and collect all meshes (including GLTF children)
       const validRefs = shapesRef.current.filter(Boolean);
-      const intersects = raycaster.current.intersectObjects(validRefs, true);
+      const allMeshes = [];
+      validRefs.forEach(ref => {
+        if (ref.isMesh) {
+          allMeshes.push(ref);
+        } else if (ref.isObject3D) {
+          // For GLTF, traverse to collect all meshes
+          ref.traverse(child => {
+            if (child.isMesh) {
+              allMeshes.push(child);
+            }
+          });
+        }
+      });
+
+      const intersects = raycaster.current.intersectObjects(allMeshes, true);
 
       if (intersects.length > 0) {
-        const selectedUUID = intersects[0].object.uuid;
+        const intersected = intersects[0].object;
+        const shapeId = intersected.userData.shapeId;
 
-        // ✅ Find matching shape by UUID
-        for (let i = 0; i < validRefs.length; i++) {
-          if (validRefs[i]?.uuid === selectedUUID) {
-            setSelectedId(shapes[i].id);
-            return;
-          }
+        if (shapeId) {
+          setSelectedId(shapeId);
+        } else {
+          setSelectedId(null);
         }
-      }
-      else {
+      } else {
         setSelectedId(null);
       }
     };
@@ -58,11 +70,12 @@ const SceneManager = ({ shapes, selectedId, setSelectedId }) => {
           rotation={shape.rotation}
           url={shape.url}
           isSelected={shape.id === selectedId}
+          shapeId={shape.id}
         />
       ))}
     </group>
   );
-};
+}
 
 
 const ThreeCanvas = ({ shapes, selectedId, setSelectedId }) => {
