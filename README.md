@@ -1,12 +1,6 @@
-# React + Vite
+# Web-based 3D Copilot
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This project is a web-based 3D scene builder using Three.js and React.js, enabling users to create, manipulate, and interact with 3D objects in a browser. The application features a user-friendly UI for spawning 3D models, selecting them via raycasting, and manipulating them (move, rotate, delete) through a control panel. It supports both basic geometric shapes (e.g., cubes, spheres) and complex GLTF models (e.g., a seashell model from Sketchfab). This prototype serves as a foundation for future exploration of AI-assisted 3D world-building.
+The project fulfills the requirements of the task description, including scene setup, object creation, manipulation, and integration of custom 3D models.
 
-Currently, two official plugins are available:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
