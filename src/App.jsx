@@ -23,7 +23,7 @@ function App() {
   const [selectedId, setSelectedId] = useState(null);
 
   const addShape = (type) => {
-    const isGLTF = ['Seashell', 'Chair'].includes(type);
+    const isGLTF = ['Seashell'].includes(type);
     const newObject = {
       id: Date.now().toString(),
       type: isGLTF ? 'GLTF' : type,

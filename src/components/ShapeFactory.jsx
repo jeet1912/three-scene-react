@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { forwardRef } from 'react';
 import { useLoader } from '@react-three/fiber';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
 
 /**
  * ShapeFactory component generates a shape mesh from a given type, position, rotation, and material.
@@ -12,13 +13,19 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
  * - materialProps: Material settings for meshLambertMaterial
  * - isSelected: If true, adds visual indication (optional glow effect or outline)
  * - meshRef: Forwarded ref for manipulation
+ * - url: URL for GLTF type                                                        
  */
+
+function cloneGLTF(gltf) {
+  const clonedScene = SkeletonUtils.clone(gltf.scene);
+  return clonedScene;
+}
 
 const ShapeFactory = forwardRef((props, ref) => {
   const {
     type,
-    position = [0, 0, 0],
-    rotation = [0, 0, 0],
+    position =[0,0,0],
+    rotation =[0,0,0],
     materialProps = {},
     isSelected = false,
     url = null
@@ -29,12 +36,14 @@ const ShapeFactory = forwardRef((props, ref) => {
   if (type === 'GLTF') {
     if (!url) return null;
     const gltf = useLoader(GLTFLoader, url);
+    const cloned = cloneGLTF(gltf);
     return (
       <primitive
-        object={gltf.scene}
+        object={cloned}
         ref={ref}
         position={position}
         rotation={rotation}
+        scale={[10,10,10]}
         castShadow
         receiveShadow
       />
@@ -73,7 +82,7 @@ const ShapeFactory = forwardRef((props, ref) => {
   const defaultMaterial = {
     color: '#F28482',
     emissive: '#F6BD60',
-    emissiveIntensity: 0.7,
+    emissiveIntensity: 1,
     flatShading: false,
     side: THREE.DoubleSide,
     ...materialProps,
