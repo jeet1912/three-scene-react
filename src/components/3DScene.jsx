@@ -4,7 +4,7 @@ import { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import ShapeFactory from './ShapeFactory';
 
-const SceneManager = ({ shapes, selectedId, setSelectedId }) => {
+const SceneManager = ({ shapes, selectedId, setSelectedId, orbitControlsRef }) => {
   const raycaster = useRef(new THREE.Raycaster());
   const { camera, gl, scene } = useThree();
   const shapesRef = useRef([]);
@@ -30,7 +30,6 @@ const SceneManager = ({ shapes, selectedId, setSelectedId }) => {
         });
         return found;
       });
-
       setControlledObject(selectedShape);
     } else {
       setControlledObject(null);
@@ -41,7 +40,7 @@ const SceneManager = ({ shapes, selectedId, setSelectedId }) => {
     const handleKeyDown = (event) => {
       if (!transformControlsRef.current) return;
       switch (event.key) {
-        case 'g': // Translate
+        case 'm': // Translate
           transformControlsRef.current.setMode('translate');
           break;
         case 'r': // Rotate
@@ -106,17 +105,14 @@ const SceneManager = ({ shapes, selectedId, setSelectedId }) => {
 
 
   useEffect(() => {  
-    if (transformControlsRef.current) {
-      console.log('Transform Control Reference, SceneManager, 3DScene.jsx ', transformControlsRef.current)
-      const controls = transformControlsRef.current;
-      const callback = (event) => {
-        const orbitControls = scene.__interaction.find(c => c instanceof OrbitControls);
-        if (orbitControls) orbitControls.enabled = !event.value;
-      };
-      controls.addEventListener('dragging-changed', callback);
-      return () => controls.removeEventListener('dragging-changed', callback);
-    }
-  }, []);
+  if (!transformControlsRef.current || !orbitControlsRef.current) return;
+  const controls = transformControlsRef.current;
+  const callback = (event) => {
+    orbitControlsRef.current.enabled = !event.value;
+  };
+  controls.addEventListener('dragging-changed', callback);
+  return () => controls.removeEventListener('dragging-changed', callback);
+}, [controlledObject]);
 
   return (
     <group>
@@ -147,6 +143,7 @@ const SceneManager = ({ shapes, selectedId, setSelectedId }) => {
 
 
 const ThreeCanvas = ({ shapes, selectedId, setSelectedId }) => {
+  const orbitControlsRef = useRef();
   return (
     <Canvas
       camera={{ position: [0, 5, 10], fov: 50, near: 0.1, far: 1000 }}
@@ -167,8 +164,11 @@ const ThreeCanvas = ({ shapes, selectedId, setSelectedId }) => {
         shapes={shapes}
         selectedId={selectedId}
         setSelectedId={setSelectedId}
+        orbitControlsRef={orbitControlsRef}
       />
-      <OrbitControls />
+      <OrbitControls 
+        ref={orbitControlsRef}
+      />
     </Canvas>
   );
 };
