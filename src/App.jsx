@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import './App.css';
 import ThreeCanvas from './components/3DScene';
 import SKETCHFAB_API_TOKEN from './apiToken';
+import JSZip from 'jszip';
 
 const shapeOptions = [
   'BoxGeometry',
@@ -117,22 +118,97 @@ function App() {
       setLoading(false);
       return;
       }
-      // Only allow direct .gltf or .glb files
-      if (!modelData.gltf.url.endsWith('.gltf') && !modelData.gltf.url.endsWith('.glb')) {
-        alert('This Sketchfab model is packaged as a ZIP and cannot be loaded directly. Please choose another.');
-        setLoading(false);
-        return;
+      //console.log('App.jsx :: Selected GLTF url is ',modelData.gltf.url)
+      //console.log(modelData.gltf.url.slice(-10))
+      
+      const url = modelData.gltf.url;
+  
+      // If the URL contains .zip, extract the first .gltf or .glb and create a blob URL
+      if (url.includes('.zip')) {
+        const zipRes = await fetch(url);
+        const zipBlob = await zipRes.blob();
+        const zip = await JSZip.loadAsync(zipBlob);
+
+        let gltfFile = null;
+        let gltfFileName = null;
+        const assetUrls = {};
+
+        // Extract all files, handling nested paths
+        for (const fileName in zip.files) {
+          const file = zip.files[fileName];
+          if (!gltfFile && (fileName.endsWith('.gltf') || fileName.endsWith('.glb'))) {
+            gltfFile = file;
+            gltfFileName = fileName;
+          } else if (!file.dir) {
+            const blob = await file.async('blob');
+            assetUrls[fileName] = URL.createObjectURL(blob);
+          }
+        }
+
+        if (!gltfFile) {
+          alert('No .gltf or .glb file found in the ZIP.');
+          return;
+        }
+
+        let gltfUrl;
+        const blobUrls = Object.values(assetUrls);
+        if (gltfFileName.endsWith('.gltf')) {
+          const gltfText = await gltfFile.async('string');
+          let gltfJson = JSON.parse(gltfText);
+
+          // Patch buffer and image URIs, handling nested paths
+          const normalizePath = (path) => {
+            // Remove './' or leading slashes, keep relative path
+            return path.replace(/^\.\//, '').replace(/^\//, '');
+          };
+
+          if (gltfJson.buffers) {
+            gltfJson.buffers.forEach((buffer) => {
+              const normalizedUri = normalizePath(buffer.uri);
+              if (assetUrls[normalizedUri]) {
+                buffer.uri = assetUrls[normalizedUri];
+              } else if (buffer.uri && !buffer.uri.startsWith('data:')) {
+                console.warn(`Buffer URI not found in ZIP: ${buffer.uri}`);
+              }
+            });
+          }
+          if (gltfJson.images) {
+            gltfJson.images.forEach((image) => {
+              const normalizedUri = normalizePath(image.uri);
+              if (assetUrls[normalizedUri]) {
+                image.uri = assetUrls[normalizedUri];
+              } else if (image.uri && !image.uri.startsWith('data:')) {
+                console.warn(`Image URI not found in ZIP: ${image.uri}`);
+              }
+            });
+          }
+          const patchedBlob = new Blob([JSON.stringify(gltfJson)], {
+            type: 'application/json',
+          });
+          gltfUrl = URL.createObjectURL(patchedBlob);
+        } else {
+          // For .glb
+          const gltfData = await gltfFile.async('uint8array');
+          const blob = new Blob([gltfData], { type: 'model/gltf-binary' });
+          gltfUrl = URL.createObjectURL(blob);
+          blobUrls.length = 0; // Clear assetUrls for .glb
+        }
+
+        const newObject = {
+          id: Date.now().toString(),
+          type: 'GLTF',
+          position: [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1],
+          rotation: [0, 0, 0],
+          url: gltfUrl,
+          assetUrls: blobUrls, // Store for cleanup
+        };
+        setObjects((prev) => [...prev, newObject]);
+        setSketchfabResults([]);
+      } else {
+        alert('Unsupported file format.');
       }
-      console.log('App.jsx :: Selected GLTF url is ',modelData.gltf.url)
-      const newObject = {
-        id: Date.now().toString(),
-        type: 'GLTF',
-        position: [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1],
-        rotation: [0, 0, 0],
-        url: modelData.gltf.url,
-      };
-      setObjects(prev => [...prev, newObject]);
-      setSketchfabResults([]);
+
+
     } catch (err){
       alert('Error fetching model from Sketchfab.');
       console.error(err);
@@ -185,7 +261,7 @@ function App() {
             {loading ? "Searching...." : rendering ? "Please wait" : "Search on Sketchfab"}
           </button>
         </div>
-        {sketchfabResults.length > 0 && (
+        {sketchfabResults.length > 0 && !rendering && (
           <div>
             <h3>Select a Sketchfab Model:</h3>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1em' }}>
