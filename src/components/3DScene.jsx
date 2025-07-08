@@ -1,6 +1,6 @@
 import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
-import { useRef, useEffect } from 'react';
+import { OrbitControls, TransformControls } from '@react-three/drei';
+import { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import ShapeFactory from './ShapeFactory';
 
@@ -8,9 +8,48 @@ const SceneManager = ({ shapes, selectedId, setSelectedId }) => {
   const raycaster = useRef(new THREE.Raycaster());
   const { camera, gl } = useThree();
   const shapesRef = useRef([]);
+  const transformControlsRef = useRef();
+  const [controlledObject, setControlledObject] = useState(null);
 
   // ✨ Clear old refs before render to avoid stale/null refs
   shapesRef.current = [];
+
+  useEffect(() => {
+    if (selectedId) {
+      const selectedShape = shapesRef.current.find(ref => {
+        if (ref.userData.shapeId === selectedId) return true;
+        let found = false;
+        ref.traverse(child => {
+          if (child.userData.shapeId === selectedId) found = true;
+        });
+        return found;
+      });
+      setControlledObject(selectedShape || null);
+    } else {
+      setControlledObject(null);
+    }
+  }, [selectedId]);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (!transformControlsRef.current) return;
+      switch (event.key) {
+        case 'g': // Translate
+          transformControlsRef.current.setMode('translate');
+          break;
+        case 'r': // Rotate
+          transformControlsRef.current.setMode('rotate');
+          break;
+        case 's': // Scale
+          transformControlsRef.current.setMode('scale');
+          break;
+        default:
+          break;
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     const handlePointerDown = (event) => {
@@ -57,6 +96,19 @@ const SceneManager = ({ shapes, selectedId, setSelectedId }) => {
     return () => gl.domElement.removeEventListener('pointerdown', handlePointerDown);
   }, [camera, gl, shapes, setSelectedId]);
 
+
+  useEffect(() => {
+    if (transformControlsRef.current) {
+      const controls = transformControlsRef.current;
+      const callback = (event) => {
+        const orbitControls = scene.__interaction.find(c => c instanceof OrbitControls);
+        if (orbitControls) orbitControls.enabled = !event.value;
+      };
+      controls.addEventListener('dragging-changed', callback);
+      return () => controls.removeEventListener('dragging-changed', callback);
+    }
+  }, []);
+
   return (
     <group>
       {shapes.map((shape) => (
@@ -73,6 +125,13 @@ const SceneManager = ({ shapes, selectedId, setSelectedId }) => {
           shapeId={shape.id}
         />
       ))}
+      {controlledObject && (
+        <TransformControls
+          ref={transformControlsRef}
+          object={controlledObject}
+          mode="translate" // Default mode
+        />
+      )}
     </group>
   );
 }

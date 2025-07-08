@@ -123,8 +123,8 @@ const ShapeFactory = forwardRef((props, ref) => {
 
   // Default material properties for basic geometries
   const defaultMaterial = {
-    color: '#F28482',
-    emissive: '#c9b6a3',
+    color: '#f5f5dc',
+    emissive: '#0e1a40',
     emissiveIntensity: 1,
     flatShading: false,
     side: THREE.FrontSide,
