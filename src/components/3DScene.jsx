@@ -6,34 +6,23 @@ import ShapeFactory from './ShapeFactory';
 
 const SceneManager = ({ shapes, selectedId, setSelectedId, orbitControlsRef }) => {
   const raycaster = useRef(new THREE.Raycaster());
-  const { camera, gl, scene } = useThree();
-  const shapesRef = useRef([]);
+  const { camera, gl } = useThree();
+  const shapesRef = useRef({});
   const transformControlsRef = useRef();
   const [controlledObject, setControlledObject] = useState(null);
-
-  // ✨ Clear old refs before render to avoid stale/null refs
-  shapesRef.current = [];
-
+  
+  /*
+  useEffect(()=>{
+    console.log(shapesRef.current)
+  },[shapesRef.current])
+  */
+ 
   useEffect(() => {
     if (!selectedId) {
       setControlledObject(null); // when no selection
       return;
     }
-    if (selectedId) {
-      const selectedShape = shapesRef.current.find(ref => {
-        if (ref.userData.shapeId === selectedId) return true;
-        let found = false;
-        ref.traverse(child => {
-          if (child.userData.shapeId === selectedId){
-            found = true;
-          }
-        });
-        return found;
-      });
-      setControlledObject(selectedShape);
-    } else {
-      setControlledObject(null);
-    }
+    setControlledObject(shapesRef.current[selectedId] || null);
   }, [selectedId]);
 
   useEffect(() => {
@@ -67,7 +56,7 @@ const SceneManager = ({ shapes, selectedId, setSelectedId, orbitControlsRef }) =
 
       raycaster.current.setFromCamera(pointer, camera);
       // Filter out nulls and collect all meshes (including GLTF children)
-      const validRefs = shapesRef.current.filter(Boolean);
+      const validRefs = Object.values(shapesRef.current).filter(Boolean);
       const allMeshes = [];
       validRefs.forEach(ref => {
         if (ref.isMesh) {
@@ -100,7 +89,7 @@ const SceneManager = ({ shapes, selectedId, setSelectedId, orbitControlsRef }) =
 
     gl.domElement.addEventListener('pointerdown', handlePointerDown);
     return () => gl.domElement.removeEventListener('pointerdown', handlePointerDown);
-  }, [camera, gl, shapes, setSelectedId]);
+  }, [camera, gl, shapes]);
 
 
 
@@ -119,8 +108,9 @@ const SceneManager = ({ shapes, selectedId, setSelectedId, orbitControlsRef }) =
       {shapes.map((shape) => (
         <ShapeFactory
           key={shape.id}
-          ref={(ref) => {
-            if (ref) shapesRef.current.push(ref);
+          ref={ref => {
+            if (ref) shapesRef.current[shape.id] = ref;
+            else delete shapesRef.current[shape.id];
           }}
           type={shape.type}
           position={shape.position}
