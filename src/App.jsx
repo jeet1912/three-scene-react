@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import './App.css';
 import ThreeCanvas from './components/3DScene';
 
@@ -40,6 +40,7 @@ function App() {
         if (obj.id !== selectedId) return obj;
         switch (action) {
           case 'delete':
+            setSelectedId(null)
             return null;
           case 'rotate':
             return {

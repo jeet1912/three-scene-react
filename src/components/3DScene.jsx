@@ -6,7 +6,7 @@ import ShapeFactory from './ShapeFactory';
 
 const SceneManager = ({ shapes, selectedId, setSelectedId }) => {
   const raycaster = useRef(new THREE.Raycaster());
-  const { camera, gl } = useThree();
+  const { camera, gl, scene } = useThree();
   const shapesRef = useRef([]);
   const transformControlsRef = useRef();
   const [controlledObject, setControlledObject] = useState(null);
@@ -15,16 +15,23 @@ const SceneManager = ({ shapes, selectedId, setSelectedId }) => {
   shapesRef.current = [];
 
   useEffect(() => {
+    if (!selectedId) {
+      setControlledObject(null); // when no selection
+      return;
+    }
     if (selectedId) {
       const selectedShape = shapesRef.current.find(ref => {
         if (ref.userData.shapeId === selectedId) return true;
         let found = false;
         ref.traverse(child => {
-          if (child.userData.shapeId === selectedId) found = true;
+          if (child.userData.shapeId === selectedId){
+            found = true;
+          }
         });
         return found;
       });
-      setControlledObject(selectedShape || null);
+
+      setControlledObject(selectedShape);
     } else {
       setControlledObject(null);
     }
@@ -51,6 +58,7 @@ const SceneManager = ({ shapes, selectedId, setSelectedId }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+
   useEffect(() => {
     const handlePointerDown = (event) => {
       const bounds = gl.domElement.getBoundingClientRect();
@@ -59,7 +67,6 @@ const SceneManager = ({ shapes, selectedId, setSelectedId }) => {
       const pointer = new THREE.Vector2(x, y);
 
       raycaster.current.setFromCamera(pointer, camera);
-
       // Filter out nulls and collect all meshes (including GLTF children)
       const validRefs = shapesRef.current.filter(Boolean);
       const allMeshes = [];
@@ -97,8 +104,10 @@ const SceneManager = ({ shapes, selectedId, setSelectedId }) => {
   }, [camera, gl, shapes, setSelectedId]);
 
 
-  useEffect(() => {
+
+  useEffect(() => {  
     if (transformControlsRef.current) {
+      console.log('Transform Control Reference, SceneManager, 3DScene.jsx ', transformControlsRef.current)
       const controls = transformControlsRef.current;
       const callback = (event) => {
         const orbitControls = scene.__interaction.find(c => c instanceof OrbitControls);
