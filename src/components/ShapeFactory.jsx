@@ -57,44 +57,6 @@ const ShapeFactory = forwardRef((props, ref) => {
 
   let geometry = null;
 
-  if (type === 'GLTF') {
-    // Handle GLTF model loading and rendering
-    if (!url) return null;
-    const gltf = useLoader(GLTFLoader, url);
-    const cloned = cloneGLTF(gltf);
-
-    useEffect(() => {
-      // Enable raycasting and apply selection highlight for GLTF meshes
-      enableRaycastOnChildren(cloned, shapeId);
-      if (isSelected) {
-        // Apply wireframe material to all meshes when selected
-        cloned.traverse(child => {
-          if (child.isMesh) {
-            child.material = new THREE.MeshStandardMaterial({
-              color: '#ffffff',
-              emissive: '#ffcc00',
-              emissiveIntensity: 1,
-              wireframe: true,
-            });
-          }
-        });
-      } else {
-        // Restore original materials when not selected
-        cloned.traverse(child => {
-          if (child.isMesh && child.userData.originalMaterial) {
-            child.material = child.userData.originalMaterial;
-          }
-        });
-      }
-    }, [cloned, shapeId, isSelected]);
-
-    return (
-      <group ref={ref} position={position} rotation={rotation} scale={[10, 10, 10]}>
-        <primitive object={cloned} />
-      </group>
-    );
-  }
-
   // Define geometry based on type
   switch (type) {
     case 'BoxGeometry':
@@ -121,6 +83,40 @@ const ShapeFactory = forwardRef((props, ref) => {
     case 'DodecahedronGeometry':
       geometry = <dodecahedronGeometry args={[0.8]} />;
       break;
+    case 'GLTF': if (!url) return null;
+      const gltf = useLoader(GLTFLoader, url);
+      const cloned = cloneGLTF(gltf);
+
+      useEffect(() => {
+        // Enable raycasting and apply selection highlight for GLTF meshes
+        enableRaycastOnChildren(cloned, shapeId);
+        if (isSelected) {
+          // Apply wireframe material to all meshes when selected
+          cloned.traverse(child => {
+            if (child.isMesh) {
+              child.material = new THREE.MeshStandardMaterial({
+                color: '#ffffff',
+                emissive: '#ffcc00',
+                emissiveIntensity: 1,
+                wireframe: true,
+              });
+            }
+          });
+        } else {
+          // Restore original materials when not selected
+          cloned.traverse(child => {
+            if (child.isMesh && child.userData.originalMaterial) {
+              child.material = child.userData.originalMaterial;
+            }
+          });
+        }
+      }, [cloned, shapeId, isSelected]);
+
+      return (
+        <group ref={ref} position={position} rotation={rotation} scale={[10, 10, 10]}>
+          <primitive object={cloned} />
+        </group>
+      );
     default:
       return null;
   }
