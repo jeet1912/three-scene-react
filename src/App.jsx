@@ -12,12 +12,15 @@ const shapeOptions = [
   'TetrahedronGeometry',
   'OctahedronGeometry',
   'DodecahedronGeometry',
-  //'Seashell'
+  'Seashell'
 ];
 
 const gltfUrls = {
   'Seashell' : '/models/seashell/scene.gltf'
 }
+
+
+
 
 function App() {
   const [objects, setObjects] = useState([]);
@@ -70,6 +73,73 @@ function App() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
+  const [sketchfabResults, setSketchfabResults] = useState([]);
+  const [rendering, setRendering] = useState(false);
+
+  const handleSketchfabSearch = async (searchTerm) => {
+    setLoading(true);
+    try {
+      const searchRes = await fetch( 
+        `https://api.sketchfab.com/v3/search?type=models&q=${encodeURIComponent(searchTerm)}&downloadable=true`, 
+        {
+          headers: {'Authorization': `Token ${SKETCHFAB_API_TOKEN}`}
+        }
+      );
+      const searchData = await searchRes.json();
+      if (!searchData.results || searchData.results.length === 0) {
+        alert('No downloadable models found for this search.');
+        setLoading(false);
+        return;
+      }
+      //console.log(searchData)
+      setSketchfabResults(searchData.results);
+    } catch (err) {
+      alert('Error fetching model from Sketchfab.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const handleAddSketchfabModel = async (model) => {
+    setRendering(true);
+    try{
+      const modelRes = await fetch(
+        `https://api.sketchfab.com/v3/models/${model.uid}/download`,
+        {
+          headers: { 'Authorization': `Token ${SKETCHFAB_API_TOKEN}` }
+        }
+      );
+      const modelData = await modelRes.json();
+      //console.log(modelData)
+      if (!modelData.gltf || !modelData.gltf.url) {
+      alert('No GLTF download available for this model.');
+      setLoading(false);
+      return;
+      }
+      // Only allow direct .gltf or .glb files
+      if (!modelData.gltf.url.endsWith('.gltf') && !modelData.gltf.url.endsWith('.glb')) {
+        alert('This Sketchfab model is packaged as a ZIP and cannot be loaded directly. Please choose another.');
+        setLoading(false);
+        return;
+      }
+      console.log('App.jsx :: Selected GLTF url is ',modelData.gltf.url)
+      const newObject = {
+        id: Date.now().toString(),
+        type: 'GLTF',
+        position: [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1],
+        rotation: [0, 0, 0],
+        url: modelData.gltf.url,
+      };
+      setObjects(prev => [...prev, newObject]);
+      setSketchfabResults([]);
+    } catch (err){
+      alert('Error fetching model from Sketchfab.');
+      console.error(err);
+    } finally {
+      setRendering(false);
+    }
+  }
 
   return (
     <div className="app">
@@ -109,14 +179,34 @@ function App() {
           }}
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            placeholder='Search custom model'
+            placeholder='Enter custom model'
           />
           <button onClick={()=> handleSketchfabSearch(searchTerm)} disabled={loading}>
-            {loading ? "Searching...." : "Add from Sketchfab"}
+            {loading ? "Searching...." : rendering ? "Please wait" : "Search on Sketchfab"}
           </button>
         </div>
-        <div style={{ height: '1em' }} />
+        {sketchfabResults.length > 0 && (
+          <div>
+            <h3>Select a Sketchfab Model:</h3>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1em' }}>
+              {sketchfabResults.map(model => (
+                <button
+                  key={model.uid}
+                  style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', cursor: 'pointer' }}
+                  onClick={() => handleAddSketchfabModel(model)}
+                >
+                  <img
+                    src={model.thumbnails.images[0]?.url}
+                    alt={model.name}
+                    style={{ width: '5rem', height: '5rem', objectFit: 'cover', borderRadius: 8, marginBottom: 4 }}
+                  />
+                </button>
+              ))}
+            </div>
 
+          </div>
+        )}
+        <div style={{ height: '1em' }} />
         <h2>Object Manipulation</h2>
         <div className="grid">
           <button onClick={() => manipulateObject('move')}>Move</button>
