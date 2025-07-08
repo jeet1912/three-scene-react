@@ -131,7 +131,7 @@ const ShapeFactory = forwardRef((props, ref) => {
     emissive: '#c9b6a3',
     emissiveIntensity: 1,
     flatShading: false,
-    side: THREE.DoubleSide,
+    side: THREE.FrontSide,
     ...materialProps,
   };
 
@@ -145,17 +145,17 @@ const ShapeFactory = forwardRef((props, ref) => {
       userData={{ selectable: true, shapeId }}
     >
       {geometry}
-      <meshLambertMaterial {...defaultMaterial} />
-      {isSelected && (
+      {isSelected ? (
         // Apply wireframe material for selected basic geometries
-        <meshStandardMaterial
+        <meshLambertMaterial
           attach="material"
           color="#ffffff"
           emissive="#ffcc00"
           emissiveIntensity={1}
           wireframe
         />
-      )}
+      ) : <meshLambertMaterial {...defaultMaterial} />
+    }
     </mesh>
   );
 });

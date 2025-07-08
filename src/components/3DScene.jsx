@@ -1,5 +1,5 @@
 import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls, Stats } from '@react-three/drei';
+import { OrbitControls } from '@react-three/drei';
 import { useRef, useEffect } from 'react';
 import * as THREE from 'three';
 import ShapeFactory from './ShapeFactory';
