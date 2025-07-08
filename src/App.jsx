@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import './App.css';
 import ThreeCanvas from './components/3DScene';
+import SKETCHFAB_API_TOKEN from './apiToken';
 
 const shapeOptions = [
   'BoxGeometry',
@@ -11,7 +12,7 @@ const shapeOptions = [
   'TetrahedronGeometry',
   'OctahedronGeometry',
   'DodecahedronGeometry',
-  'Seashell'
+  //'Seashell'
 ];
 
 const gltfUrls = {
@@ -21,7 +22,7 @@ const gltfUrls = {
 function App() {
   const [objects, setObjects] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
-
+  
   const addShape = (type) => {
     const isGLTF = ['Seashell'].includes(type);
     const newObject = {
@@ -67,6 +68,9 @@ function App() {
     );
   };
 
+  const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(false);
+
   return (
     <div className="app">
       <div className="left-panel">
@@ -86,7 +90,31 @@ function App() {
             </button>
           ))}
         </div>
-
+        <div style={{
+          padding: '0.5em',
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: '2em',
+          width: '100%',
+        }}>
+          <input style={{
+            width: '50%',
+            padding: '0.5em',
+            margin: '0.5em 0',
+            border: '1px solid #ccc',
+            borderRadius: '4px',
+            fontSize: '1em',
+            boxSizing: 'border-box',
+          }}
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            placeholder='Search custom model'
+          />
+          <button onClick={()=> handleSketchfabSearch(searchTerm)} disabled={loading}>
+            {loading ? "Searching...." : "Add from Sketchfab"}
+          </button>
+        </div>
         <div style={{ height: '1em' }} />
 
         <h2>Object Manipulation</h2>

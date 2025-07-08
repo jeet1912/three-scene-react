@@ -14,9 +14,9 @@ const SceneManager = ({ shapes, selectedId, setSelectedId, orbitControlsRef }) =
   /*
   useEffect(()=>{
     console.log(shapesRef.current)
-  },[shapesRef.current])
+  },[shapes])
   */
- 
+
   useEffect(() => {
     if (!selectedId) {
       setControlledObject(null); // when no selection
