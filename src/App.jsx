@@ -62,7 +62,7 @@ function App() {
           default:
             return obj;
         }
-      }).filter(Boolean)
+      }).filter(Boolean)  // removes null values from objects.
     );
   };
 

@@ -84,15 +84,14 @@ const ThreeCanvas = ({ shapes, selectedId, setSelectedId }) => {
       camera={{ position: [0, 5, 10], fov: 50, near: 0.1, far: 1000 }}
       shadows
       onCreated={({ scene }) => {
-        scene.background = new THREE.Color('#FAF9F6');
+        scene.background = new THREE.Color('#594040');
       }}
     >
-      <ambientLight intensity={0.9} />
       <directionalLight
         castShadow
-        position={[0, 10, 10]}
-        intensity={0.7}
-        color={'#b7a5ff'}
+        position={[0, 0, 10]}
+        intensity={1}
+        color={'#ffffff'}
         shadow-mapSize-width={1024}
         shadow-mapSize-height={1024}
       />
@@ -102,7 +101,6 @@ const ThreeCanvas = ({ shapes, selectedId, setSelectedId }) => {
         setSelectedId={setSelectedId}
       />
       <OrbitControls />
-      <Stats />
     </Canvas>
   );
 };
