@@ -13,14 +13,7 @@ const shapeOptions = [
   'TetrahedronGeometry',
   'OctahedronGeometry',
   'DodecahedronGeometry',
-  'Seashell'
 ];
-
-const gltfUrls = {
-  'Seashell' : '/models/seashell/scene.gltf'
-}
-
-
 
 
 function App() {
@@ -28,13 +21,13 @@ function App() {
   const [selectedId, setSelectedId] = useState(null);
   
   const addShape = (type) => {
-    const isGLTF = ['Seashell'].includes(type);
+
     const newObject = {
       id: Date.now().toString(),
-      type: isGLTF ? 'GLTF' : type,
+      type: type,
       position: [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1],
       rotation: [0, 0, 0],
-      url: isGLTF ? gltfUrls[type] : null
+      url: null
     };
     setObjects(prev => [...prev, newObject]);
   };
@@ -45,7 +38,13 @@ function App() {
         if (obj.id !== selectedId) return obj;
         switch (action) {
           case 'delete':
-            setSelectedId(null)
+            setSelectedId(null);
+            if (obj.url && obj.url.startsWith('blob:')) {
+                URL.revokeObjectURL(obj.url);
+              }
+            if (obj.assetUrls) {
+              obj.assetUrls.forEach((url) => URL.revokeObjectURL(url));
+            }
             return null;
           case 'rotate':
             return {
@@ -143,6 +142,9 @@ function App() {
             const blob = await file.async('blob');
             assetUrls[fileName] = URL.createObjectURL(blob);
           }
+          //console.log('File ',file)
+          //console.log('GLTF File ', gltfFile)
+          //console.log('GLTF Filename ', fileName)
         }
 
         if (!gltfFile) {
@@ -187,7 +189,6 @@ function App() {
           });
           gltfUrl = URL.createObjectURL(patchedBlob);
         } else {
-          // For .glb
           const gltfData = await gltfFile.async('uint8array');
           const blob = new Blob([gltfData], { type: 'model/gltf-binary' });
           gltfUrl = URL.createObjectURL(blob);

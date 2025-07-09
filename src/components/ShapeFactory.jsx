@@ -113,7 +113,7 @@ const ShapeFactory = forwardRef((props, ref) => {
       }, [cloned, shapeId, isSelected]);
 
       return (
-        <group ref={ref} position={position} rotation={rotation} scale={[10, 10, 10]}>
+        <group ref={ref} position={position} rotation={rotation} scale={[1, 1, 1]}>
           <primitive object={cloned} />
         </group>
       );
