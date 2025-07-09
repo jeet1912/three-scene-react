@@ -3,6 +3,8 @@ import { OrbitControls, TransformControls } from '@react-three/drei';
 import { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import ShapeFactory from './ShapeFactory';
+import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment';
+
 
 const SceneManager = ({ shapes, selectedId, setSelectedId, orbitControlsRef }) => {
   const raycaster = useRef(new THREE.Raycaster());
@@ -10,7 +12,8 @@ const SceneManager = ({ shapes, selectedId, setSelectedId, orbitControlsRef }) =
   const shapesRef = useRef({});
   const transformControlsRef = useRef();
   const [controlledObject, setControlledObject] = useState(null);
-  
+  const raycastEnabled = useRef(true);
+
   /*
   useEffect(()=>{
     console.log(shapesRef.current)
@@ -22,6 +25,7 @@ const SceneManager = ({ shapes, selectedId, setSelectedId, orbitControlsRef }) =
       setControlledObject(null); // when no selection
       return;
     }
+    console.log('Selected ID triggered the effect to set controlled object')
     const ref = shapesRef.current[selectedId];
     if (ref && scene.getObjectById(ref.id)) {
       setControlledObject(ref);
@@ -54,6 +58,7 @@ const SceneManager = ({ shapes, selectedId, setSelectedId, orbitControlsRef }) =
 
   useEffect(() => {
     const handlePointerDown = (event) => {
+      if (!raycastEnabled.current) return; 
       const bounds = gl.domElement.getBoundingClientRect();
       const x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
       const y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
@@ -96,16 +101,27 @@ const SceneManager = ({ shapes, selectedId, setSelectedId, orbitControlsRef }) =
     return () => gl.domElement.removeEventListener('pointerdown', handlePointerDown);
   }, [camera, gl, shapes]);
 
-
-
   useEffect(() => {  
-  if (!transformControlsRef.current || !orbitControlsRef.current) return;
-  const controls = transformControlsRef.current;
-  const callback = (event) => {
-    orbitControlsRef.current.enabled = !event.value;
-  };
-  controls.addEventListener('dragging-changed', callback);
-  return () => controls.removeEventListener('dragging-changed', callback);
+    const transforms = transformControlsRef.current;
+    const orbits = orbitControlsRef.current;
+    if (controlledObject) {
+      orbits.enabled = false;
+      console.log('A controlled object disabled orbit controls.')
+    } else {
+      orbits.enabled = true;
+      console.log('Orbit controls are active.')
+    }
+    //console.log('Orbits : ',orbits.enabled)
+    //console.log('Raycasting ref: ',raycastEnabled)
+    if (!transforms || !orbits) return;
+    const callback = (event) => {
+      //console.log('Event ',event)
+      orbits.enabled = !event.value;
+      //console.log('Orbits inside callback: ',orbits.enabled)
+      //raycastEnabled.current = !raycastEnabled.current;
+    };
+    transforms.addEventListener('dragging-changed', callback);
+    return () => transforms.removeEventListener('dragging-changed', callback);
 }, [controlledObject]);
 
   return (
@@ -144,9 +160,10 @@ const ThreeCanvas = ({ shapes, selectedId, setSelectedId }) => {
       camera={{ position: [0, 5, 10], fov: 50, near: 0.1, far: 1000 }}
       shadows
       onCreated={({ scene }) => {
-        scene.background = new THREE.Color('#594040');
+        scene.background = new THREE.Color('#FFFFFF');
       }}
     >
+      <ambientLight intensity={0.5} />
       <directionalLight
         castShadow
         position={[0, 0, 10]}

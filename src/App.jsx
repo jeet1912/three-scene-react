@@ -256,6 +256,11 @@ function App() {
           }}
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter' && !loading && !rendering) {
+                handleSketchfabSearch(searchTerm);
+              }
+            }}
             placeholder='Enter custom model'
           />
           <button onClick={()=> handleSketchfabSearch(searchTerm)} disabled={loading}>
@@ -280,10 +285,8 @@ function App() {
                 </button>
               ))}
             </div>
-
           </div>
         )}
-        <div style={{ height: '1em' }} />
         <h2>Object Manipulation</h2>
         <div className="grid">
           <button onClick={() => manipulateObject('move')}>Move</button>
