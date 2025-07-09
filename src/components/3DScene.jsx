@@ -6,7 +6,7 @@ import ShapeFactory from './ShapeFactory';
 
 const SceneManager = ({ shapes, selectedId, setSelectedId, orbitControlsRef }) => {
   const raycaster = useRef(new THREE.Raycaster());
-  const { camera, gl } = useThree();
+  const { camera, gl, scene } = useThree();
   const shapesRef = useRef({});
   const transformControlsRef = useRef();
   const [controlledObject, setControlledObject] = useState(null);
@@ -22,8 +22,13 @@ const SceneManager = ({ shapes, selectedId, setSelectedId, orbitControlsRef }) =
       setControlledObject(null); // when no selection
       return;
     }
-    setControlledObject(shapesRef.current[selectedId] || null);
-  }, [selectedId]);
+    const ref = shapesRef.current[selectedId];
+    if (ref && scene.getObjectById(ref.id)) {
+      setControlledObject(ref);
+    } else {
+      setControlledObject(null); // Clear if ref is invalid or not in scene
+    }
+  }, [selectedId, shapes, scene]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -120,7 +125,7 @@ const SceneManager = ({ shapes, selectedId, setSelectedId, orbitControlsRef }) =
           shapeId={shape.id}
         />
       ))}
-      {controlledObject && (
+      {controlledObject && scene.getObjectById(controlledObject.id) && (
         <TransformControls
           ref={transformControlsRef}
           object={controlledObject}
