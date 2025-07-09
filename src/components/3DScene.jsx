@@ -12,7 +12,7 @@ const SceneManager = ({ shapes, selectedId, setSelectedId, orbitControlsRef }) =
   const shapesRef = useRef({});
   const transformControlsRef = useRef();
   const [controlledObject, setControlledObject] = useState(null);
-  const raycastEnabled = useRef(true);
+  //const raycastEnabled = useRef(true);
 
   /*
   useEffect(()=>{
@@ -58,7 +58,7 @@ const SceneManager = ({ shapes, selectedId, setSelectedId, orbitControlsRef }) =
 
   useEffect(() => {
     const handlePointerDown = (event) => {
-      if (!raycastEnabled.current) return; 
+      //if (!raycastEnabled.current) return; 
       const bounds = gl.domElement.getBoundingClientRect();
       const x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
       const y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
@@ -118,7 +118,8 @@ const SceneManager = ({ shapes, selectedId, setSelectedId, orbitControlsRef }) =
       //console.log('Event ',event)
       orbits.enabled = !event.value;
       //console.log('Orbits inside callback: ',orbits.enabled)
-      //raycastEnabled.current = !raycastEnabled.current;
+      //raycastEnabled.current = !event.value;
+      //console.log('Raycasting', raycastEnabled.current? 'enabled.':'disabled.')
     };
     transforms.addEventListener('dragging-changed', callback);
     return () => transforms.removeEventListener('dragging-changed', callback);
