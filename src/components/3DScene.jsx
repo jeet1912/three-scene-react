@@ -1,10 +1,8 @@
 import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls, TransformControls } from '@react-three/drei';
+import { OrbitControls, TransformControls, Sky } from '@react-three/drei';
 import { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
 import ShapeFactory from './ShapeFactory';
-import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment';
-
 
 const SceneManager = ({ shapes, selectedId, setSelectedId, orbitControlsRef }) => {
   const raycaster = useRef(new THREE.Raycaster());
@@ -154,6 +152,7 @@ const SceneManager = ({ shapes, selectedId, setSelectedId, orbitControlsRef }) =
 }
 
 
+
 const ThreeCanvas = ({ shapes, selectedId, setSelectedId }) => {
   const orbitControlsRef = useRef();
   return (
@@ -164,7 +163,19 @@ const ThreeCanvas = ({ shapes, selectedId, setSelectedId }) => {
         scene.background = new THREE.Color('#FFFFFF');
       }}
     >
-      <ambientLight intensity={0.5} />
+      <Sky
+        distance={100000000000000} // Far enough to avoid clipping with models
+        sunPosition={[5, 1, 8]} // Sun position for lighting
+        inclination={0.6} // Sun angle (0 to 1)
+        azimuth={0.25} // Sun rotation (0 to 1)
+        mieCoefficient={0.005} // Scattering for atmosphere
+        elevation={2} // Sun height
+        turbidity={10} // Cloud/sky intensity
+        rayleigh={0.5} // Sky color intensity
+        // Optional: Set as environment map
+        // envMap={true}
+      />
+      <ambientLight intensity={0.8} />
       <directionalLight
         castShadow
         position={[0, 0, 10]}
