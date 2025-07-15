@@ -65,44 +65,23 @@ function App() {
     setObjects(prev => [...prev, newObject]);
   };
 
-  const manipulateObject = (action) => {
-    setObjects(prev =>
-      prev.map((obj) => {
-        if (obj.id !== selectedId) return obj;
-        switch (action) {
-          case 'delete':
-            setSelectedId(null);
-            if (obj.url && obj.url.startsWith('blob:')) {
-                URL.revokeObjectURL(obj.url);
-              }
-            if (obj.assetUrls) {
-              obj.assetUrls.forEach((url) => URL.revokeObjectURL(url));
-            }
-            return null;
-          case 'rotate':
-            return {
-              ...obj,
-              rotation: [
-                obj.rotation[0],
-                obj.rotation[1] + 0.5,
-                obj.rotation[2]
-              ],
-            };
-          case 'move':
-            return {
-              ...obj,
-              position: [
-                obj.position[0] + 0.5,
-                obj.position[1],
-                obj.position[2],
-              ],
-            };
-          default:
-            return obj;
+const deleteObject = (id) => {
+  setObjects(prev =>
+    prev
+      .map((obj) => {
+        if (obj.id !== id) return obj;
+        setSelectedId(null);
+        if (obj.url && obj.url.startsWith('blob:')) {
+          URL.revokeObjectURL(obj.url);
         }
-      }).filter(Boolean)  // removes null values from objects.
-    );
-  };
+        if (obj.assetUrls) {
+          obj.assetUrls.forEach((url) => URL.revokeObjectURL(url));
+        }
+        return null;
+      })
+      .filter(Boolean) // removes null values from objects.
+  );
+};
 
   const updateObjectProperties = () => {
     setObjects((prev) =>
@@ -264,17 +243,17 @@ function App() {
           type: 'GLTF',
           position: [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1],
           rotation: [0, 0, 0],
-          scale: [1,1,1],
+          scale: [1, 1, 1],
           url: gltfUrl,
-          assetUrls: blobUrls, // Store for cleanup
+          assetUrls: blobUrls,
+          name: model.name || 'GLTF_Model', // Store Sketchfab model name
+          color: '#f5f5dc', // Default color
         };
         setObjects((prev) => [...prev, newObject]);
         setSketchfabResults([]);
       } else {
         alert('Unsupported file format.');
       }
-
-
     } catch (err){
       alert('Error fetching model from Sketchfab.');
       console.error(err);
@@ -298,12 +277,13 @@ function App() {
       setLlmFeedback('Processing command...');
       // Construct scene state
       const sceneState = {
-        objects: objects.map(({ id, type, position, rotation, scale}) => ({
+        objects: objects.map(({ id, type, position, rotation, scale, name}) => ({
           id,
           type,
           position,
           rotation,
           scale,
+          name: name || type
         })),
         selectedId,
         availableShapes: shapeOptions.map((s) => s.replace('Geometry', '')),
@@ -350,7 +330,7 @@ function App() {
       console.log('Complete LLM response:', response.data);
 
       const result = JSON.parse(response.data.message.content);
-      const { action, type, value, targetId, feedback } = result;
+      const { action, type, value, targetId, name, feedback } = result;
       
       if (feedback) {
         setLlmFeedback(feedback);
@@ -361,6 +341,7 @@ function App() {
         case 'add':
           if (shapeOptions.includes(type)) {
             addShape(type, value?.position || undefined);
+            setLlmFeedback('Done.')
           } else {
             setLlmFeedback(`Invalid shape: ${type}. Available: ${shapeOptions.join(', ')}`);
           }
@@ -370,7 +351,8 @@ function App() {
             setLlmFeedback('No object selected for manipulation.');
           } else if (['move', 'rotate', 'scale', 'delete'].includes(type)) {
             if (type === 'delete') {
-              manipulateObject(type, targetId || selectedId);
+              deleteObject(targetId || selectedId);
+              setLlmFeedback('Object deleted.')
             } else {
               setObjects((prev) =>
                 prev.map((obj) => {
@@ -392,15 +374,27 @@ function App() {
           }
           break;
         case 'select':
-          if (objects.find((obj) => obj.id === targetId)) {
-            setSelectedId(targetId);
-            setLlmFeedback(`Selected object ${targetId}`);
+           let selectObj;
+        if (targetId) {
+            selectObj = objects.find((obj) => obj.id === targetId);
+          } else if (name) {
+            const matchingObjects = objects.filter((obj) => obj.name.toLowerCase() === name.toLowerCase());
+            if (matchingObjects.length > 1) {
+              setLlmFeedback(`Multiple objects found for ${name}, please specify ID`);
+              return;
+            }
+            selectObj = matchingObjects[0];
+          }
+          if (selectObj) {
+            setSelectedId(selectObj.id);
+            setLlmFeedback(`Selected object ${selectObj.name} (ID: ${selectObj.id})`);
           } else {
-            setLlmFeedback(`Object ${targetId} not found.`);
+            setLlmFeedback(`Object not found: ${targetId || name}`);
           }
           break;
         case 'search':
           await handleSketchfabSearch(value);
+          setLlmFeedback('Search results fetched.')
           break;
         case 'list':
           if (objects.length === 0) {
@@ -659,7 +653,7 @@ function App() {
               <button onClick={updateObjectProperties}>
                 Apply
               </button>
-              <button onClick={() => manipulateObject('delete')}>Delete</button>
+              <button onClick={() => deleteObject(selectedId)}>Delete</button>
               </div>
             </div>
           </div>

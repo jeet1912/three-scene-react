@@ -49,11 +49,12 @@ const ShapeFactory = forwardRef((props, ref) => {
     type,
     position = [0, 0, 0],
     rotation = [0, 0, 0],
-    scale = [1,1,1],
+    scale = [1, 1, 1],
     materialProps = {},
     isSelected = false,
     url = null,
     shapeId,
+    color = '#f5f5dc'
   } = props;
 
   let geometry = null;
@@ -124,6 +125,7 @@ const ShapeFactory = forwardRef((props, ref) => {
           cloned.traverse(child => {
             if (child.isMesh && child.userData.originalMaterial) {
               child.material = child.userData.originalMaterial;
+              child.material.color.set(color);
             }
           });
         }
@@ -140,7 +142,7 @@ const ShapeFactory = forwardRef((props, ref) => {
 
   // Default material properties for basic geometries
   const defaultMaterial = {
-    color: '#f5f5dc',
+    color,
     emissive: '#0e1a40',
     emissiveIntensity: 1,
     flatShading: false,
