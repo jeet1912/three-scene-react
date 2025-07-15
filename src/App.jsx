@@ -288,23 +288,22 @@ function App() {
   const [llmFeedback, setLlmFeedback] = useState('');
 
   const handleLlmCommand = async () => {
-    if (!llmInput.trim()) {
+    if (!llmInput) {
       setLlmFeedback('Please enter a command.');
       return;
     }
-    setLlmLoading(true);
-    setLlmFeedback('Processing command...');
-
+  
     try {
+      setLlmLoading(true);
+      setLlmFeedback('Processing command...');
       // Construct scene state
       const sceneState = {
-        objects: objects.map(({ id, type, position, rotation, scale, name }) => ({
+        objects: objects.map(({ id, type, position, rotation, scale}) => ({
           id,
-          type: type.replace('Geometry', ''),
+          type,
           position,
           rotation,
           scale,
-          name: name || type,
         })),
         selectedId,
         availableShapes: shapeOptions.map((s) => s.replace('Geometry', '')),
@@ -320,12 +319,12 @@ function App() {
           messages: [
             {
               role: 'system',
-              content: `You are an assistant controlling a 3D scene. The current scene state is: ${JSON.stringify(sceneState)}. 
+              content: `You are an assistant controlling a 3D scene in React. The current scene state is: ${JSON.stringify(sceneState)}. 
                 Parse the user's command to perform actions like adding shapes, manipulating objects (move, rotate, scale, delete, select), 
                 searching Sketchfab, or listing objects. Respond with a JSON object containing "action" (add, manipulate, search, select, list),
                 "type" (shape type or action type), "value" (e.g., position array, rotation array, scale array, search term), and 
                 optional "targetId" (object ID for manipulation/select). Examples:
-                - Add: {"action":"add","type":"Sphere","value":{"position":[1,0,0]}}
+                - Add: {"action":"add","type":"SphereGeometry","value":{"position":[1,0,0]}}
                 - Move: {"action":"manipulate","type":"move","targetId":"123","value":[1,0,0]}
                 - Select: {"action":"select","targetId":"123"}
                 - Search: {"action":"search","value":"car"}
@@ -457,7 +456,7 @@ function App() {
         <div className="grid">
           {shapeOptions.map((shape) => (
             <button key={shape} 
-            onClick={() => {console.log('Shape clicked:', shape)
+            onClick={() => {//console.log('Shape clicked:', shape)
             addShape(shape)}}>
               <img
                 src={`/assets/${shape.replace('Geometry', '').toLowerCase()}.png`}
@@ -492,7 +491,7 @@ function App() {
             }}
             placeholder='Enter custom model'
           />
-          <button onClick={()=> handleSketchfabSearch(searchTerm)} disabled={loading}>
+          <button onClick={()=> handleSketchfabSearch(searchTerm)} disabled={loading || !searchTerm}>
             {loading ? "Searching...." : rendering ? "Please wait" : "Search on Sketchfab"}
           </button>
         </div>
