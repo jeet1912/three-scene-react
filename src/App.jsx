@@ -280,14 +280,14 @@ const deleteObject = (id) => {
         objects: objects.map(({ id, type, position, rotation, scale, name}) => ({
           id,
           type,
-          position,
-          rotation,
-          scale,
+          position: [...position], 
+          rotation: [...rotation],
+          scale: [...scale],
           name: name || type
         })),
         selectedId,
         availableShapes: shapeOptions.map((s) => s.replace('Geometry', '')),
-        availableActions: ['add', 'move', 'rotate', 'scale', 'delete', 'select', 'list', 'search'],
+        availableActions: ['add','addMultiple', 'move', 'rotate', 'scale', 'delete', 'select', 'list', 'search'],
       };
 
       console.log('Current scene : ', JSON.stringify(sceneState))
@@ -299,18 +299,23 @@ const deleteObject = (id) => {
           messages: [
             {
               role: 'system',
-              content: `You are an assistant controlling a 3D scene in React.js and Three.js. The current scene state is: ${JSON.stringify(sceneState)}. 
-                Parse the user's command to perform actions like adding shapes, manipulating objects (move, rotate, scale, delete, select), 
-                searching Sketchfab, or listing objects. Respond with a JSON object containing "action" (add, manipulate, search, select, list),
-                "type" (shape type or action type), "value" (e.g., position array, rotation array, scale array, search term), and 
-                optional "targetId" (object ID for manipulation/select). Examples:
-                - Add: {"action":"add","type":"SphereGeometry","value":{"position":[1,0,0]}}
-                - Move: {"action":"manipulate","type":"move","targetId":"123","value":[1,0,0]}
-                - Select: {"action":"select","targetId":"123"}
-                - Search: {"action":"search","value":"car"}
-                - List: {"action":"list"}
-                If the command is ambiguous (e.g., "move the sphere" with multiple spheres), return {"feedback":"Multiple spheres found, please specify ID"}. 
-                Ensure the response is a single valid JSON object.`,
+              content: `You are an assistant controlling a 3D scene built with Three.js. The current scene state is: ${JSON.stringify(sceneState, null, 2)}. 
+            Parse the user's command to perform actions like adding shapes, adding multiple shapes, manipulating objects (move, rotate, scale, delete), 
+            changing colors, selecting objects by ID or name, searching Sketchfab, or listing objects. Respond with a single valid JSON object containing:
+            - "action": (add, addMultiple, manipulate, color, select, search, list)
+            - "type": (shape type like Sphere or action type like move, color)
+            - "value": (e.g., {position:{x:1,y:0,z:0}}, {color:"red"}, search term, or array of objects for addMultiple)
+            - optional "targetId": (object ID for manipulation/select/color)
+            - optional "name": (name for selection or manipulation, e.g., "car" for GLTF models, "cylinder" for shapes)
+            Examples:
+            - Add: {"action":"add","type":"SphereGeometry","value":{"position":{x:1,y:0,z:0}}}
+            - Add multiple: {"action":"addMultiple","value":[{"type":"SphereGeometry","position":{x:1,y:0,z:0}},{"type":"BoxGeometry","position":{x:2,y:0,z:0}}]}
+            - Move: {"action":"manipulate","type":"move","name":"cylinder","value":{x:-1,y:0,z:0}}
+            - Select by name: {"action":"select","name":"car"}
+            - Search: {"action":"search","value":"car"}
+            - List: {"action":"list"}
+            If ambiguous (e.g., "move the cylinder" with multiple cylinders or "select the car" with multiple GLTF models), return {"feedback":"Multiple objects found for [type/name], please specify ID or unique name"}. 
+            Ensure the response is a single valid JSON object with no extra text.`,
             },
             {
               role: 'user',
@@ -340,39 +345,99 @@ const deleteObject = (id) => {
       switch (action) {
         case 'add':
           if (shapeOptions.includes(type)) {
-            addShape(type, value?.position || undefined);
-            setLlmFeedback('Done.')
+            setObjects((prev) => [
+              ...prev,
+              {
+                id: Date.now().toString(),
+                type,
+                position: value?.position ? [value.position.x, value.position.y, value.position.z] : [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1],
+                rotation: [0, 0, 0],
+                scale: [1, 1, 1],
+                name: type,
+                color: value?.color || '#f5f5dc',
+              },
+            ]);
+            setLlmFeedback(`Added ${type}`);
           } else {
             setLlmFeedback(`Invalid shape: ${type}. Available: ${shapeOptions.join(', ')}`);
           }
           break;
+        case 'addMultiple':
+          if (Array.isArray(value) && value.every((item) => shapeOptions.includes(item.type))) {
+            setObjects((prev) => [
+              ...prev,
+              ...value.map((item) => ({
+                id: Date.now().toString() + Math.random(),
+                type: item.type,
+                position: item.position ? [item.position.x, item.position.y, item.position.z] : [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1],
+                rotation: [0, 0, 0],
+                scale: [1, 1, 1],
+                name: item.type,
+              })),
+            ]);
+            setLlmFeedback(`Added ${value.length} objects`);
+          } else {
+            setLlmFeedback(`Invalid types in addMultiple. Available: ${shapeOptions.join(', ')}`);
+          }
+          break;  
         case 'manipulate':
-          if (!targetId && !selectedId) {
+          let targetObj;
+          if (targetId) {
+            targetObj = objects.find((obj) => obj.id === targetId);
+          } else if (name) {
+            const matchingObjects = objects.filter((obj) => obj.name.toLowerCase() === name.toLowerCase());
+            if (matchingObjects.length > 1) {
+              setLlmFeedback(`Multiple objects found for ${name}, please specify ID`);
+              return;
+            }
+            targetObj = matchingObjects[0];
+          } else if (selectedId) {
+            targetObj = objects.find((obj) => obj.id === selectedId);
+          }
+
+          if (!targetObj) {
             setLlmFeedback('No object selected for manipulation.');
-          } else if (['move', 'rotate', 'scale', 'delete'].includes(type)) {
+            return;
+          }
+
+          if (['move', 'rotate', 'scale', 'delete'].includes(type)) {
             if (type === 'delete') {
-              deleteObject(targetId || selectedId);
-              setLlmFeedback('Object deleted.')
+              manipulateObject('delete');
+              setLlmFeedback(`Deleted object ${targetObj.id}`);
             } else {
               setObjects((prev) =>
                 prev.map((obj) => {
-                  if (obj.id !== (targetId || selectedId)) return obj;
+                  if (obj.id !== targetObj.id) return obj;
+                  const propMap = {
+                    move: 'position',
+                    rotate: 'rotation',
+                    scale: 'scale',
+                  };
+                  const prop = propMap[type];
+                  const current = [...obj[prop]]; // Create new array to avoid immutability issues
+                  const newValue = value
+                    ? [
+                        value.x !== undefined ? current[0] + value.x : current[0],
+                        value.y !== undefined ? current[1] + value.y : current[1],
+                        value.z !== undefined ? current[2] + value.z : current[2],
+                      ]
+                    : [
+                        type === 'move' ? current[0] + 0.5 : current[0],
+                        type === 'rotate' ? current[1] + 0.5 : current[1],
+                        type === 'scale' ? current[2] * 1.1 : current[2],
+                      ];
                   return {
                     ...obj,
-                    [type === 'move' ? 'position' : type === 'rotate' ? 'rotation' : 'scale']: value || (
-                      type === 'move' ? [obj.position[0] + 0.5, obj.position[1], obj.position[2]] :
-                      type === 'rotate' ? [obj.rotation[0], obj.rotation[1] + 0.5, obj.rotation[2]] :
-                      [obj.scale[0] * 1.1, obj.scale[1] * 1.1, obj.scale[2] * 1.1]
-                    ),
+                    [prop]: newValue,
                   };
                 })
               );
-              setLlmFeedback(`Performed ${type} on object ${targetId || selectedId}`);
+              setLlmFeedback(`Performed ${type} on object ${targetObj.name} (ID: ${targetObj.id})`);
             }
           } else {
             setLlmFeedback('Invalid action: ' + type);
           }
-          break;
+        break;
         case 'select':
           let selectObj;
           if (targetId) {
