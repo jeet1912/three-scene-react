@@ -15,7 +15,6 @@ const shapeOptions = [
   'DodecahedronGeometry',
 ];
 
-
 function App() {
   const [objects, setObjects] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
@@ -298,23 +297,28 @@ function App() {
         <h2>Shape Palette</h2>
         <div className="grid">
           {shapeOptions.map((shape) => (
-            <button key={shape} onClick={() => addShape(shape)}>
+            <button key={shape} 
+            onClick={() => {console.log('Shape clicked:', shape)
+            addShape(shape)}}>
+              <img
+                src={`/assets/${shape.replace('Geometry', '').toLowerCase()}.png`}
+                alt={shape.replace('Geometry', '')}
+                style={{ width: '5rem', height: '5rem', objectFit: 'cover', borderRadius: 8, marginBottom: 4 }}
+              />
               {shape.replace('Geometry', '')}
             </button>
           ))}
         </div>
         <div style={{
-          padding: '0.5em',
           display: 'flex',
           flexDirection: 'row',
-          alignItems: 'center',
-          gap: '2em',
-          width: '100%',
+          gap: '12px',
+          marginTop: '1em',
         }}>
           <input style={{
             width: '50%',
             padding: '0.5em',
-            margin: '0.5em 0',
+            marginRight: '0.5em',
             border: '1px solid #ccc',
             borderRadius: '4px',
             fontSize: '1em',
@@ -353,9 +357,7 @@ function App() {
             </div>
           </div>
         )}
-        
-        
-          {selectedId && (
+        {selectedId && (
           <div>
           <h2>Object Manipulation</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1em' }}>
@@ -458,7 +460,7 @@ function App() {
                   />
                 </div>
               </div>
-              <div style={{gap:'0.5em'}}> </div>
+              <div style={{gap:'0.3em'}}> </div>
               <div style={{display: 'flex', flexDirection: 'row', gap: '1em', justifyContent:'center'}}> 
               <button onClick={updateObjectProperties}>
                 Apply
