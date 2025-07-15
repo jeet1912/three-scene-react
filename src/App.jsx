@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import './App.css';
-import ThreeCanvas from './components/3DScene';
+import ThreeCanvas from './components/Canvas';
 import SKETCHFAB_API_TOKEN from './apiToken';
 import JSZip from 'jszip';
 
@@ -288,7 +288,14 @@ function App() {
     if (bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [objects, sketchfabResults, selectedId]);
+  }, [sketchfabResults, selectedId]);
+
+  const topRef = useRef(null);
+  useEffect(() => {
+  if (!selectedId && topRef.current) {
+    topRef.current.scrollIntoView({ behavior: 'smooth' });
+  }
+  }, [sketchfabResults, selectedId]);
 
   return (
     <div className="app">
@@ -301,6 +308,7 @@ function App() {
       </div>
 
       <div className="right-panel">
+        <div ref={topRef}/>
         <h2>Shape Palette</h2>
         <div className="grid">
           {shapeOptions.map((shape) => (
@@ -367,9 +375,9 @@ function App() {
         {selectedId && (
           <div>
           <h2>Object Manipulation</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1em' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5em' }}>
               {/* Position Inputs */}
-              <div>
+              <div style={{marginTop:'-1.5em'}}>
                 <h3>Position</h3>
                 <div style={{ display: 'flex', gap: '0.5em' }}>
                   <input

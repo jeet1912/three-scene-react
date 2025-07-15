@@ -12,6 +12,7 @@
   "dependencies": {
     "@react-three/drei": "^10.2.0",
     "@react-three/fiber": "^9.1.2",
+    "axios": "^1.10.0",
     "drei": "^2.2.21",
     "jszip": "^3.10.1",
     "react": "^19.1.0",
