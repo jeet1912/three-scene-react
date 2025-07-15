@@ -5,7 +5,6 @@ import SKETCHFAB_API_TOKEN from './apiToken';
 import JSZip from 'jszip';
 import axios from 'axios';
 
-
 const shapeOptions = [
   'BoxGeometry',
   'SphereGeometry',
@@ -312,25 +311,27 @@ function App() {
         availableActions: ['add', 'move', 'rotate', 'scale', 'delete', 'select', 'list', 'search'],
       };
 
+      console.log('Current scene : ', JSON.stringify(sceneState))
+
       const response = await axios.post(
         'http://localhost:11434/api/chat',
         {
-          model: 'llama3', // Replace with your model (e.g., 'mistral')
+          model: 'llama3',
           messages: [
             {
               role: 'system',
-              content: `You are an assistant controlling a 3D scene. The current scene state is: ${JSON.stringify(sceneState, null, 2)}. 
-              Parse the user's command to perform actions like adding shapes, manipulating objects (move, rotate, scale, delete, select), 
-              searching Sketchfab, or listing objects. Respond with a JSON object containing "action" (add, manipulate, search, select, list),
-              "type" (shape type or action type), "value" (e.g., position array, rotation array, scale array, search term), and 
-              optional "targetId" (object ID for manipulation/select). Examples:
-              - Add: {"action":"add","type":"Sphere","value":{"position":[1,0,0]}}
-              - Move: {"action":"manipulate","type":"move","targetId":"123","value":[1,0,0]}
-              - Select: {"action":"select","targetId":"123"}
-              - Search: {"action":"search","value":"car"}
-              - List: {"action":"list"}
-              If the command is ambiguous (e.g., "move the sphere" with multiple spheres), return {"feedback":"Multiple spheres found, please specify ID"}. 
-              Ensure the response is valid JSON.`,
+              content: `You are an assistant controlling a 3D scene. The current scene state is: ${JSON.stringify(sceneState)}. 
+                Parse the user's command to perform actions like adding shapes, manipulating objects (move, rotate, scale, delete, select), 
+                searching Sketchfab, or listing objects. Respond with a JSON object containing "action" (add, manipulate, search, select, list),
+                "type" (shape type or action type), "value" (e.g., position array, rotation array, scale array, search term), and 
+                optional "targetId" (object ID for manipulation/select). Examples:
+                - Add: {"action":"add","type":"Sphere","value":{"position":[1,0,0]}}
+                - Move: {"action":"manipulate","type":"move","targetId":"123","value":[1,0,0]}
+                - Select: {"action":"select","targetId":"123"}
+                - Search: {"action":"search","value":"car"}
+                - List: {"action":"list"}
+                If the command is ambiguous (e.g., "move the sphere" with multiple spheres), return {"feedback":"Multiple spheres found, please specify ID"}. 
+                Ensure the response is a single valid JSON object.`,
             },
             {
               role: 'user',
@@ -338,6 +339,7 @@ function App() {
             },
           ],
           format: 'json', // Enforce JSON response
+          stream: false, // Disable streaming for single JSON response
         },
         {
           headers: {
@@ -346,9 +348,11 @@ function App() {
         }
       );
 
+      console.log('Complete LLM response:', response.data);
+
       const result = JSON.parse(response.data.message.content);
       const { action, type, value, targetId, feedback } = result;
-
+      
       if (feedback) {
         setLlmFeedback(feedback);
         return;
@@ -516,15 +520,15 @@ function App() {
           style={{
             display: 'flex',
             flexDirection: 'row',
-            alignItems: 'center',
-            gap: '1em',
+            gap: '12px',
             marginTop: '1em',
           }}
         >
           <input
             style={{
-              width: '50%',
+               width: '50%',
               padding: '0.5em',
+              marginRight: '0.5em',
               border: '1px solid #ccc',
               borderRadius: '4px',
               fontSize: '1em',
@@ -532,15 +536,15 @@ function App() {
             }}
             value={llmInput}
             onChange={(e) => setLlmInput(e.target.value)}
-            placeholder="Enter command (e.g., 'add sphere' or 'search car')"
+            placeholder="'add sphere' or 'search car'"
             disabled={llmLoading || loading || rendering}
-            onKeyPress={(e) => e.key === 'Enter' && handleLlmCommand()}
+            onKeyDown={(e) => e.key === 'Enter' && handleLlmCommand()}
           />
           <button
             onClick={handleLlmCommand}
             disabled={llmLoading || loading || rendering || !llmInput.trim()}
           >
-            {llmLoading ? 'Processing...' : 'Send Command'}
+            {llmLoading ? 'Processing...' : 'Implement using an LLM'}
           </button>
         </div>
         {llmFeedback && (
