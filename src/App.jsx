@@ -3,6 +3,8 @@ import './App.css';
 import ThreeCanvas from './components/Canvas';
 import SKETCHFAB_API_TOKEN from './apiToken';
 import JSZip from 'jszip';
+import axios from 'axios';
+
 
 const shapeOptions = [
   'BoxGeometry',
@@ -53,7 +55,6 @@ function App() {
   }, [selectedId, objects]);
 
   const addShape = (type) => {
-
     const newObject = {
       id: Date.now().toString(),
       type: type,
@@ -283,6 +284,145 @@ function App() {
     }
   }
 
+  const [llmInput, setLlmInput] = useState('');
+  const [llmLoading, setLlmLoading] = useState(false);
+  const [llmFeedback, setLlmFeedback] = useState('');
+
+  const handleLlmCommand = async () => {
+    if (!llmInput.trim()) {
+      setLlmFeedback('Please enter a command.');
+      return;
+    }
+    setLlmLoading(true);
+    setLlmFeedback('Processing command...');
+
+    try {
+      // Construct scene state
+      const sceneState = {
+        objects: objects.map(({ id, type, position, rotation, scale, name }) => ({
+          id,
+          type: type.replace('Geometry', ''),
+          position,
+          rotation,
+          scale,
+          name: name || type,
+        })),
+        selectedId,
+        availableShapes: shapeOptions.map((s) => s.replace('Geometry', '')),
+        availableActions: ['add', 'move', 'rotate', 'scale', 'delete', 'select', 'list', 'search'],
+      };
+
+      const response = await axios.post(
+        'http://localhost:11434/api/chat',
+        {
+          model: 'llama3', // Replace with your model (e.g., 'mistral')
+          messages: [
+            {
+              role: 'system',
+              content: `You are an assistant controlling a 3D scene. The current scene state is: ${JSON.stringify(sceneState, null, 2)}. 
+              Parse the user's command to perform actions like adding shapes, manipulating objects (move, rotate, scale, delete, select), 
+              searching Sketchfab, or listing objects. Respond with a JSON object containing "action" (add, manipulate, search, select, list),
+              "type" (shape type or action type), "value" (e.g., position array, rotation array, scale array, search term), and 
+              optional "targetId" (object ID for manipulation/select). Examples:
+              - Add: {"action":"add","type":"Sphere","value":{"position":[1,0,0]}}
+              - Move: {"action":"manipulate","type":"move","targetId":"123","value":[1,0,0]}
+              - Select: {"action":"select","targetId":"123"}
+              - Search: {"action":"search","value":"car"}
+              - List: {"action":"list"}
+              If the command is ambiguous (e.g., "move the sphere" with multiple spheres), return {"feedback":"Multiple spheres found, please specify ID"}. 
+              Ensure the response is valid JSON.`,
+            },
+            {
+              role: 'user',
+              content: llmInput,
+            },
+          ],
+          format: 'json', // Enforce JSON response
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      const result = JSON.parse(response.data.message.content);
+      const { action, type, value, targetId, feedback } = result;
+
+      if (feedback) {
+        setLlmFeedback(feedback);
+        return;
+      }
+
+      switch (action) {
+        case 'add':
+          if (shapeOptions.includes(type)) {
+            addShape(type, value?.position || undefined);
+          } else {
+            setLlmFeedback(`Invalid shape: ${type}. Available: ${shapeOptions.join(', ')}`);
+          }
+          break;
+        case 'manipulate':
+          if (!targetId && !selectedId) {
+            setLlmFeedback('No object selected for manipulation.');
+          } else if (['move', 'rotate', 'scale', 'delete'].includes(type)) {
+            if (type === 'delete') {
+              manipulateObject(type, targetId || selectedId);
+            } else {
+              setObjects((prev) =>
+                prev.map((obj) => {
+                  if (obj.id !== (targetId || selectedId)) return obj;
+                  return {
+                    ...obj,
+                    [type === 'move' ? 'position' : type === 'rotate' ? 'rotation' : 'scale']: value || (
+                      type === 'move' ? [obj.position[0] + 0.5, obj.position[1], obj.position[2]] :
+                      type === 'rotate' ? [obj.rotation[0], obj.rotation[1] + 0.5, obj.rotation[2]] :
+                      [obj.scale[0] * 1.1, obj.scale[1] * 1.1, obj.scale[2] * 1.1]
+                    ),
+                  };
+                })
+              );
+              setLlmFeedback(`Performed ${type} on object ${targetId || selectedId}`);
+            }
+          } else {
+            setLlmFeedback('Invalid action: ' + type);
+          }
+          break;
+        case 'select':
+          if (objects.find((obj) => obj.id === targetId)) {
+            setSelectedId(targetId);
+            setLlmFeedback(`Selected object ${targetId}`);
+          } else {
+            setLlmFeedback(`Object ${targetId} not found.`);
+          }
+          break;
+        case 'search':
+          await handleSketchfabSearch(value);
+          break;
+        case 'list':
+          if (objects.length === 0) {
+            setLlmFeedback('No objects in the scene.');
+          } else {
+            setLlmFeedback(
+              'Objects in scene: ' +
+                objects
+                  .map((obj) => `${obj.name || obj.type.replace('Geometry', '')} (ID: ${obj.id})`)
+                  .join(', ')
+            );
+          }
+          break;
+        default:
+          setLlmFeedback('Unknown command: ' + action);
+      }
+    } catch (err) {
+      setLlmFeedback('Error processing command: ' + err.message);
+      console.error('LLM error:', err);
+    } finally {
+      setLlmLoading(false);
+      setLlmInput('');
+    }
+  };
+
   const bottomRef = useRef(null);
   useEffect(() => {
     if (bottomRef.current) {
@@ -371,6 +511,42 @@ function App() {
               ))}
             </div>
           </div>
+        )}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: '1em',
+            marginTop: '1em',
+          }}
+        >
+          <input
+            style={{
+              width: '50%',
+              padding: '0.5em',
+              border: '1px solid #ccc',
+              borderRadius: '4px',
+              fontSize: '1em',
+              boxSizing: 'border-box',
+            }}
+            value={llmInput}
+            onChange={(e) => setLlmInput(e.target.value)}
+            placeholder="Enter command (e.g., 'add sphere' or 'search car')"
+            disabled={llmLoading || loading || rendering}
+            onKeyPress={(e) => e.key === 'Enter' && handleLlmCommand()}
+          />
+          <button
+            onClick={handleLlmCommand}
+            disabled={llmLoading || loading || rendering || !llmInput.trim()}
+          >
+            {llmLoading ? 'Processing...' : 'Send Command'}
+          </button>
+        </div>
+        {llmFeedback && (
+          <p style={{ color: llmFeedback.startsWith('Error') ? 'red' : 'black', marginTop: '0.5em' }}>
+            {llmFeedback}
+          </p>
         )}
         {selectedId && (
           <div>
