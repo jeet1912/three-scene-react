@@ -86,13 +86,18 @@ function App() {
         }
       );
       const searchData = await searchRes.json();
+      //console.log('Search data ', searchData)
+      // After fetching and checking results
       if (!searchData.results || searchData.results.length === 0) {
         alert('No downloadable models found for this search.');
         setLoading(false);
         return;
-      }
-      //console.log(searchData)
-      setSketchfabResults(searchData.results);
+      }  
+      const sortedResults = [...searchData.results].sort(
+          (a, b) => (b.likeCount || 0) - (a.likeCount || 0)
+      );
+      // Display only the top N (e.g., 10)
+      setSketchfabResults(sortedResults.slice(0, 12));
     } catch (err) {
       alert('Error fetching model from Sketchfab.');
       console.error(err);
@@ -144,7 +149,7 @@ function App() {
           }
           //console.log('File ',file)
           //console.log('GLTF File ', gltfFile)
-          //console.log('GLTF Filename ', fileName)
+          console.log('GLTF Filename ', fileName)
         }
 
         if (!gltfFile) {

@@ -178,7 +178,7 @@ const ThreeCanvas = ({ shapes, selectedId, setSelectedId }) => {
       <ambientLight intensity={0.8} />
       <directionalLight
         castShadow
-        position={[0, 0, 10]}
+        position={[5, 1, 8]}
         intensity={1}
         color={'#ffffff'}
         shadow-mapSize-width={1024}
