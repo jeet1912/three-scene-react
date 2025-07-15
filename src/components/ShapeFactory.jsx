@@ -87,6 +87,22 @@ const ShapeFactory = forwardRef((props, ref) => {
     case 'GLTF': if (!url) return null;
       const gltf = useLoader(GLTFLoader, url);
       const cloned = cloneGLTF(gltf);
+      
+      // Normalization
+      const box = new THREE.Box3().setFromObject(cloned);
+      const size = new THREE.Vector3();
+      box.getSize(size);
+      // Find the largest dimension
+      const maxDim = Math.max(size.x, size.y, size.z);
+      // Desired normalized size (e.g., 1 unit)
+      const targetSize = 1;
+      const scale = targetSize / maxDim;
+      // Center the model
+      const center = new THREE.Vector3();
+      box.getCenter(center);
+      cloned.position.sub(center); // Move center to origin
+      // Scale the model
+      cloned.scale.setScalar(scale);
 
       useEffect(() => {
         // Enable raycasting and apply selection highlight for GLTF meshes
