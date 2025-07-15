@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import './App.css';
 import ThreeCanvas from './components/3DScene';
 import SKETCHFAB_API_TOKEN from './apiToken';
@@ -283,6 +283,13 @@ function App() {
     }
   }
 
+  const bottomRef = useRef(null);
+  useEffect(() => {
+    if (bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [objects, sketchfabResults, selectedId]);
+
   return (
     <div className="app">
       <div className="left-panel">
@@ -470,6 +477,7 @@ function App() {
             </div>
           </div>
         )}
+         <div ref={bottomRef} />
       </div>
     </div>
   );
