@@ -299,7 +299,7 @@ const deleteObject = (id) => {
           messages: [
             {
               role: 'system',
-              content: `You are an assistant controlling a 3D scene in React. The current scene state is: ${JSON.stringify(sceneState)}. 
+              content: `You are an assistant controlling a 3D scene in React.js and Three.js. The current scene state is: ${JSON.stringify(sceneState)}. 
                 Parse the user's command to perform actions like adding shapes, manipulating objects (move, rotate, scale, delete, select), 
                 searching Sketchfab, or listing objects. Respond with a JSON object containing "action" (add, manipulate, search, select, list),
                 "type" (shape type or action type), "value" (e.g., position array, rotation array, scale array, search term), and 
@@ -374,20 +374,20 @@ const deleteObject = (id) => {
           }
           break;
         case 'select':
-           let selectObj;
-        if (targetId) {
-            selectObj = objects.find((obj) => obj.id === targetId);
-          } else if (name) {
-            const matchingObjects = objects.filter((obj) => obj.name.toLowerCase() === name.toLowerCase());
-            if (matchingObjects.length > 1) {
-              setLlmFeedback(`Multiple objects found for ${name}, please specify ID`);
-              return;
+          let selectObj;
+          if (targetId) {
+              selectObj = objects.find((obj) => obj.id === targetId);
+            } else if (name) {
+              const matchingObjects = objects.filter((obj) => obj.name.toLowerCase() === name.toLowerCase());
+              if (matchingObjects.length > 1) {
+                setLlmFeedback(`Multiple objects found for ${name}, please specify ID`);
+                return;
+              }
+              selectObj = matchingObjects[0];
             }
-            selectObj = matchingObjects[0];
-          }
           if (selectObj) {
             setSelectedId(selectObj.id);
-            setLlmFeedback(`Selected object ${selectObj.name} (ID: ${selectObj.id})`);
+            setLlmFeedback(`Selected object (ID: ${selectObj.id})`);
           } else {
             setLlmFeedback(`Object not found: ${targetId || name}`);
           }
