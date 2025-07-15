@@ -135,6 +135,7 @@ const SceneManager = ({ shapes, selectedId, setSelectedId, orbitControlsRef }) =
           type={shape.type}
           position={shape.position}
           rotation={shape.rotation}
+          scale={shape.scale}
           url={shape.url}
           isSelected={shape.id === selectedId}
           shapeId={shape.id}

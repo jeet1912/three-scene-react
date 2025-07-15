@@ -49,6 +49,7 @@ const ShapeFactory = forwardRef((props, ref) => {
     type,
     position = [0, 0, 0],
     rotation = [0, 0, 0],
+    scale = [1,1,1],
     materialProps = {},
     isSelected = false,
     url = null,
@@ -113,7 +114,7 @@ const ShapeFactory = forwardRef((props, ref) => {
       }, [cloned, shapeId, isSelected]);
 
       return (
-        <group ref={ref} position={position} rotation={rotation} scale={[1, 1, 1]}>
+        <group ref={ref} position={position} rotation={rotation} scale={scale}>
           <primitive object={cloned} />
         </group>
       );
@@ -135,6 +136,7 @@ const ShapeFactory = forwardRef((props, ref) => {
     <mesh
       position={position}
       rotation={rotation}
+      scale={scale}
       ref={ref}
       castShadow
       receiveShadow

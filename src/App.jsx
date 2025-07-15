@@ -20,6 +20,39 @@ function App() {
   const [objects, setObjects] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   
+  const [positionInput, setPositionInput] = useState({ x: 0, y: 0, z: 0 });
+  const [scaleInput, setScaleInput] = useState({ x: 1, y: 1, z: 1 });
+  const [rotationInput, setRotationInput] = useState({ x: 0, y: 0, z: 0 });
+
+  useEffect(() => {
+    if (selectedId) {
+      const selectedObject = objects.find((obj) => obj.id === selectedId);
+      if (selectedObject) {
+        setPositionInput({
+          x: selectedObject.position[0],
+          y: selectedObject.position[1],
+          z: selectedObject.position[2],
+        });
+        // Assuming scale is not yet in the object, default to 1
+        setScaleInput({
+          x: selectedObject.scale[0],
+          y: selectedObject.scale[1],
+          z: selectedObject.scale[2]
+        });
+        setRotationInput({
+          x: selectedObject.rotation[0],
+          y: selectedObject.rotation[1],
+          z: selectedObject.rotation[2],
+        });
+      }
+    } else {
+      // Reset inputs when no object is selected
+      setPositionInput({ x: 0, y: 0, z: 0 });
+      setScaleInput({ x: 1, y: 1, z: 1 });
+      setRotationInput({ x: 0, y: 0, z: 0 });
+    }
+  }, [selectedId, objects]);
+
   const addShape = (type) => {
 
     const newObject = {
@@ -27,6 +60,7 @@ function App() {
       type: type,
       position: [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1],
       rotation: [0, 0, 0],
+      scale: [1,1,1],
       url: null
     };
     setObjects(prev => [...prev, newObject]);
@@ -68,6 +102,32 @@ function App() {
             return obj;
         }
       }).filter(Boolean)  // removes null values from objects.
+    );
+  };
+
+  const updateObjectProperties = () => {
+    setObjects((prev) =>
+      prev.map((obj) => {
+        if (obj.id !== selectedId) return obj;
+        return {
+          ...obj,
+          position: [
+            parseFloat(positionInput.x) || 0,
+            parseFloat(positionInput.y) || 0,
+            parseFloat(positionInput.z) || 0,
+          ],
+          scale: [
+            parseFloat(scaleInput.x) || 1,
+            parseFloat(scaleInput.y) || 1,
+            parseFloat(scaleInput.z) || 1,
+          ],
+          rotation: [
+            parseFloat(rotationInput.x) || 0,
+            parseFloat(rotationInput.y) || 0,
+            parseFloat(rotationInput.z) || 0,
+          ],
+        };
+      })
     );
   };
 
@@ -205,6 +265,7 @@ function App() {
           type: 'GLTF',
           position: [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1],
           rotation: [0, 0, 0],
+          scale: [1,1,1],
           url: gltfUrl,
           assetUrls: blobUrls, // Store for cleanup
         };
@@ -292,12 +353,121 @@ function App() {
             </div>
           </div>
         )}
-        <h2>Object Manipulation</h2>
-        <div className="grid">
-          <button onClick={() => manipulateObject('move')}>Move</button>
-          <button onClick={() => manipulateObject('rotate')}>Rotate</button>
-          <button onClick={() => manipulateObject('delete')}>Delete</button>
-        </div>
+        
+        
+          {selectedId && (
+          <div>
+          <h2>Object Manipulation</h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1em' }}>
+              {/* Position Inputs */}
+              <div>
+                <h3>Position</h3>
+                <div style={{ display: 'flex', gap: '0.5em' }}>
+                  <input
+                    type="number"
+                    value={positionInput.x}
+                    onChange={(e) =>
+                      setPositionInput({ ...positionInput, x: e.target.value })
+                    }
+                    placeholder="X"
+                    style={{ width: '33%', padding: '0.5em', border: '1px solid #ccc', borderRadius: '4px' }}
+                  />
+                  <input
+                    type="number"
+                    value={positionInput.y}
+                    onChange={(e) =>
+                      setPositionInput({ ...positionInput, y: e.target.value })
+                    }
+                    placeholder="Y"
+                    style={{ width: '33%', padding: '0.5em', border: '1px solid #ccc', borderRadius: '4px' }}
+                  />
+                  <input
+                    type="number"
+                    value={positionInput.z}
+                    onChange={(e) =>
+                      setPositionInput({ ...positionInput, z: e.target.value })
+                    }
+                    placeholder="Z"
+                    style={{ width: '33%', padding: '0.5em', border: '1px solid #ccc', borderRadius: '4px' }}
+                  />
+                </div>
+              </div>
+              {/* Scale Inputs */}
+              <div>
+                <h3>Scale</h3>
+                <div style={{ display: 'flex', gap: '0.5em' }}>
+                  <input
+                    type="number"
+                    value={scaleInput.x}
+                    onChange={(e) => setScaleInput({ ...scaleInput, x: e.target.value })}
+                    placeholder="X"
+                    step="0.1"
+                    style={{ width: '33%', padding: '0.5em', border: '1px solid #ccc', borderRadius: '4px' }}
+                  />
+                  <input
+                    type="number"
+                    value={scaleInput.y}
+                    onChange={(e) => setScaleInput({ ...scaleInput, y: e.target.value })}
+                    placeholder="Y"
+                    step="0.1"
+                    style={{ width: '33%', padding: '0.5em', border: '1px solid #ccc', borderRadius: '4px' }}
+                  />
+                  <input
+                    type="number"
+                    value={scaleInput.z}
+                    onChange={(e) => setScaleInput({ ...scaleInput, z: e.target.value })}
+                    placeholder="Z"
+                    step="0.1"
+                    style={{ width: '33%', padding: '0.5em', border: '1px solid #ccc', borderRadius: '4px' }}
+                  />
+                </div>
+              </div>
+              {/* Rotation Inputs */}
+              <div>
+                <h3>Rotation (radians)</h3>
+                <div style={{ display: 'flex', gap: '0.5em' }}>
+                  <input
+                    type="number"
+                    value={rotationInput.x}
+                    onChange={(e) =>
+                      setRotationInput({ ...rotationInput, x: e.target.value })
+                    }
+                    placeholder="X"
+                    step="0.1"
+                    style={{ width: '33%', padding: '0.5em', border: '1px solid #ccc', borderRadius: '4px' }}
+                  />
+                  <input
+                    type="number"
+                    value={rotationInput.y}
+                    onChange={(e) =>
+                      setRotationInput({ ...rotationInput, y: e.target.value })
+                    }
+                    placeholder="Y"
+                    step="0.1"
+                    style={{ width: '33%', padding: '0.5em', border: '1px solid #ccc', borderRadius: '4px' }}
+                  />
+                  <input
+                    type="number"
+                    value={rotationInput.z}
+                    onChange={(e) =>
+                      setRotationInput({ ...rotationInput, z: e.target.value })
+                    }
+                    placeholder="Z"
+                    step="0.1"
+                    style={{ width: '33%', padding: '0.5em', border: '1px solid #ccc', borderRadius: '4px' }}
+                  />
+                </div>
+              </div>
+              <div style={{gap:'0.5em'}}> </div>
+              <div style={{display: 'flex', flexDirection: 'row', gap: '1em', justifyContent:'center'}}> 
+              <button onClick={updateObjectProperties}>
+                Apply
+              </button>
+              <button onClick={() => manipulateObject('delete')}>Delete</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
