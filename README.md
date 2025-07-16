@@ -23,8 +23,8 @@ Create, manipulate, and manage primitive shapes (boxes, spheres, cones, etc.) an
   - Highlights selected object with a wireframe material.
 
 - **Natural‑Language Control**  
-  - Enter commands like “add sphere at x:1 y:2 z:0”, “move box by 1 on X”, “delete car”, “search car”, or simply “list”.  
-  - Backed by a local LLM API (e.g. Llama3) on `http://localhost:11434/api/chat`.
+  - Enter commands like “add sphere at x:1 y:2 z:0”, “move box by 1 on X”, “delete car”, “search car”, or simply “list all objects”.  
+  - Backed by a local LLM API (e.g. Llama3) on `http://localhost:11434/api/chat` through Ollama.
 
 - **Orbit & Sky**  
   - `OrbitControls` for free camera navigation.  
@@ -34,6 +34,7 @@ Create, manipulate, and manage primitive shapes (boxes, spheres, cones, etc.) an
 
 ## 🛠️ Tech Stack
 
+- **Vite**
 - **React**  
 - **Three.js** via **react-three-fiber**  
 - **@react-three/drei** (Sky, TransformControls, OrbitControls)  
@@ -60,3 +61,34 @@ Create, manipulate, and manage primitive shapes (boxes, spheres, cones, etc.) an
 4. **Local Development server**
 
     open http://localhost:5174/ on your browser.
+
+---
+
+## 🧭 Usage
+
+1. **Add Shapes**  
+   Click any shape in the right‑hand palette to spawn it at a random position.
+
+2. **Select & Manipulate**  
+   - **Click** any object in the 3D canvas to select.  
+   - Use the **TransformControls** gizmo (mode: translate/rotate/scale).  
+     - Press **`m`** to switch to translate, **`r`** for rotate, **`s`** for scale.  
+   - Or use the numeric inputs under **Object Manipulation** to type exact values, then click **Apply**.
+
+3. **Sketchfab Models**  
+   - Type a keyword in the **Custom Model** search bar.  
+   - Click **Search on Sketchfab** → choose a thumbnail → imports and normalizes the model.
+
+4. **Natural‑Language Commands**  
+   - In the LLM input box, try commands like:  
+     - `add sphere at x:1 y:2 z:0`  
+     - `move the box by x:0.5`  
+     - `scale the tetrahedron`  
+     - `delete the car`  
+     - `search dragon model`  
+     - `list`  
+   - Click **Implement using an LLM** or press enter. Feedback appears below.
+
+5. **Delete**  
+   - Hit **Delete** button in the manipulation panel (when an object is selected).  
+   - Or use LLM command: `delete <name or ID>`.
