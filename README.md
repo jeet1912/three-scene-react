@@ -45,12 +45,12 @@ Create, manipulate, and manage primitive shapes (boxes, spheres, cones, etc.) an
 ## 🔧 Installation
 
 1. **Clone & install**  
-
+   ```zsh
    git clone https://github.com/jeet1912/three-scene-react.git
    cd three-scene-react
    npm install
 
-2. **Set your Sketchfab API token**
+2. **Set your Sketchfab API token in ./apiToken.js**
 
     SKETCHFAB_API_TOKEN = "######"
 
@@ -92,3 +92,20 @@ Create, manipulate, and manage primitive shapes (boxes, spheres, cones, etc.) an
 5. **Delete**  
    - Hit **Delete** button in the manipulation panel (when an object is selected).  
    - Or use LLM command: `delete <name or ID>`.
+
+
+## 🖼️ Screenshots
+
+Here are some UI screenshots showcasing the editor in action:
+
+<p align="center">
+  <img src="./screenshots/firstScreen.png" alt="Shape Palette & Canvas" width="600" />
+</p>
+
+<p align="center">
+  <img src="./screenshots/objectManipulation.png" alt="Object Manipulation Panel" width="600" />
+</p>
+
+<p align="center">
+  <img src="./screenshots/llmSearch.png" alt="Sketchfab Search & Results" width="600" />
+</p>
