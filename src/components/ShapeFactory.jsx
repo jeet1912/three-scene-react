@@ -97,13 +97,13 @@ const ShapeFactory = forwardRef((props, ref) => {
       const maxDim = Math.max(size.x, size.y, size.z);
       // Desired normalized size (e.g., 1 unit)
       const targetSize = 1;
-      const scale = targetSize / maxDim;
+      const normScale = targetSize / maxDim;
       // Center the model
       const center = new THREE.Vector3();
       box.getCenter(center);
       cloned.position.sub(center); // Move center to origin
       // Scale the model
-      cloned.scale.setScalar(scale);
+      cloned.scale.setScalar(normScale);
 
       useEffect(() => {
         // Enable raycasting and apply selection highlight for GLTF meshes
@@ -132,8 +132,8 @@ const ShapeFactory = forwardRef((props, ref) => {
       }, [cloned, shapeId, isSelected]);
 
       return (
-        <group ref={ref} position={position} rotation={rotation} scale={scale}>
-          <primitive object={cloned} />
+        <group ref={ref}>
+          <primitive object={cloned} position={position} rotation={rotation} scale={scale}/>
         </group>
       );
     default:
