@@ -315,8 +315,9 @@ const deleteObject = (id) => {
             - optional "targetId": (object ID for manipulation/select/color)
             - optional "name": (name for selection or manipulation, e.g., "car" for GLTF models, "cylinder" for shapes)
             Examples:
-            - Add: {"action":"add","type":"SphereGeometry","value":{"position":{x:1,y:0,z:0}}}. 
-              - Always populate position with random x, y and z coordinates. Add a sphere : {"action":"add","type":"SphereGeometry","value":{"position":{x:5,y:-2,z:1}}}. 
+            - Add: {"action":"add","type":"SphereGeometry","value":{"position":{x:1,y:0,z:0}}}.
+              - Adhere to the format of the output required for Add command. 
+              - You should generate a json object with action, type and value properties, including sub properties such as position for value, which should have random numbers for x, y and z.
             - Add multiple: {"action":"addMultiple","value":[{"type":"SphereGeometry","position":{x:1,y:0,z:0}},{"type":"BoxGeometry","position":{x:5,y:0,z:0}}]}
               - Add two cones: {"action":"addMultiple", "value":[{"type":"ConeGeometry","position":{x:1,y:0,z:0}},{"type":"ConeGeometry","position":{x:5,y:0,z:0}}]}
             - Move cylinder to x:-5 : {"action":"manipulate","actionType":"move","name":"cylinder","value":{x:-5, y:[left unchanged],z:[left unchanged]}}
@@ -362,7 +363,12 @@ const deleteObject = (id) => {
               {
                 id: Date.now().toString(),
                 type,
-                position: value != undefined ? value.position != {} ? [value.position.x, value.position.y, value.position.z] : [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1] : [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1],
+                position: value && value.position &&
+                          typeof value.position.x === 'number' &&
+                          typeof value.position.y === 'number' &&
+                          typeof value.position.z === 'number'
+                            ? [value.position.x, value.position.y, value.position.z]
+                            : [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1],
                 rotation: [0, 0, 0],
                 scale: [1, 1, 1],
                 name: type,
