@@ -316,10 +316,10 @@ const deleteObject = (id) => {
             - optional "name": (name for selection or manipulation, e.g., "car" for GLTF models, "cylinder" for shapes)
             Examples:
             - Add: {"action":"add","type":"SphereGeometry","value":{"position":{x:1,y:0,z:0}}}. 
-              - Always populate position with random x, y and z coordinates.
+              - Always populate position with random x, y and z coordinates. Add a sphere : {"action":"add","type":"SphereGeometry","value":{"position":{x:5,y:-2,z:1}}}. 
             - Add multiple: {"action":"addMultiple","value":[{"type":"SphereGeometry","position":{x:1,y:0,z:0}},{"type":"BoxGeometry","position":{x:5,y:0,z:0}}]}
-              - Add three cones: {"action":"addMultiple", "value":[{"type":"ConeGeometry","position":{x:1,y:0,z:0}},{"type":"ConeGeometry","position":{x:5,y:0,z:0}}]}
-            - Move: {"action":"manipulate","actionType":"move","name":"cylinder","value":{x:[user input or left unchanged],y:[user input or left unchanged],z: [user input or left unchanged]}}
+              - Add two cones: {"action":"addMultiple", "value":[{"type":"ConeGeometry","position":{x:1,y:0,z:0}},{"type":"ConeGeometry","position":{x:5,y:0,z:0}}]}
+            - Move cylinder to x:-5 : {"action":"manipulate","actionType":"move","name":"cylinder","value":{x:-5, y:[left unchanged],z:[left unchanged]}}
             - Select by name: {"action":"select","name":"car"}
             - Search: {"action":"search","value":"car"}
             - List: {"action":"list"}
@@ -362,7 +362,7 @@ const deleteObject = (id) => {
               {
                 id: Date.now().toString(),
                 type,
-                position: value != null ? value.position != null ? [value.position.x, value.position.y, value.position.z] : [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1] : [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1],
+                position: value != undefined ? value.position != {} ? [value.position.x, value.position.y, value.position.z] : [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1] : [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1],
                 rotation: [0, 0, 0],
                 scale: [1, 1, 1],
                 name: type,
@@ -397,22 +397,17 @@ const deleteObject = (id) => {
           if (targetId) {
             targetObj = objects.find((obj) => obj.id === targetId);
           } else if (name) {
-            const matchingObjects = objects.filter((obj) => {
-              console.log(" check ", obj.name)
-              console.log(" check ", name)
-              obj.name.toLowerCase() === name.toLowerCase()
-            } );
+          const matchingObjects = objects.filter((obj) => obj.name.toLowerCase() === name.toLowerCase());
             if (matchingObjects.length > 1) {
               setLlmFeedback(`Multiple objects found for ${name}, please specify ID`);
               return;
             }
+            console.log("Matching objects ", matchingObjects);
             targetObj = matchingObjects[0];
-            console.log("Target obj ", targetObj)
           } else if (selectedId) {
             targetObj = objects.find((obj) => obj.id === selectedId);
-            console.log("Target obj ", targetObj)
           }
-
+            console.log("Target obj ", targetObj)
           if (!targetObj) {
             setLlmFeedback('No object selected for manipulation.');
             return;
