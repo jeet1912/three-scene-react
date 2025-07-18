@@ -60,6 +60,7 @@ function App() {
       position: [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1],
       rotation: [0, 0, 0],
       scale: [1,1,1],
+      name: type,
       url: null
     };
     setObjects(prev => [...prev, newObject]);
@@ -246,8 +247,8 @@ const deleteObject = (id) => {
           scale: [1, 1, 1],
           url: gltfUrl,
           assetUrls: blobUrls,
-          name: model.name || 'GLTF_Model', // Store Sketchfab model name
-          color: '#f5f5dc', // Default color
+          name: model.name || 'GLTF',
+          color: '#f5f5dc', 
         };
         setObjects((prev) => [...prev, newObject]);
         setSketchfabResults([]);
@@ -261,6 +262,10 @@ const deleteObject = (id) => {
       setRendering(false);
     }
   }
+
+  useEffect(() => {
+    console.log('Objects ',objects)
+  }, [objects])
 
   const [llmInput, setLlmInput] = useState('');
   const [llmLoading, setLlmLoading] = useState(false);
@@ -299,23 +304,30 @@ const deleteObject = (id) => {
           messages: [
             {
               role: 'system',
-              content: `You are an assistant controlling a 3D scene built with Three.js. The current scene state is: ${JSON.stringify(sceneState, null, 2)}. 
+              content: `
+              You are an assistant controlling a 3D scene built with Three.js. The current scene state is: ${JSON.stringify(sceneState)}.
             Parse the user's command to perform actions like adding shapes, adding multiple shapes, manipulating objects (move, rotate, scale, delete), 
             changing colors, selecting objects by ID or name, searching Sketchfab, or listing objects. Respond with a single valid JSON object containing:
             - "action": (add, addMultiple, manipulate, color, select, search, list)
-            - "type": (shape type like Sphere or action type like move, color)
+            - "type": (shape type like Sphere)
+            - "actionType" : (action type like move, rotate, scale or color)
             - "value": (e.g., {position:{x:1,y:0,z:0}}, {color:"red"}, search term, or array of objects for addMultiple)
             - optional "targetId": (object ID for manipulation/select/color)
             - optional "name": (name for selection or manipulation, e.g., "car" for GLTF models, "cylinder" for shapes)
             Examples:
-            - Add: {"action":"add","type":"SphereGeometry","value":{"position":{x:1,y:0,z:0}}}
-            - Add multiple: {"action":"addMultiple","value":[{"type":"SphereGeometry","position":{x:1,y:0,z:0}},{"type":"BoxGeometry","position":{x:2,y:0,z:0}}]}
-            - Move: {"action":"manipulate","type":"move","name":"cylinder","value":{x:-1,y:0,z:0}}
+            - Add: {"action":"add","type":"SphereGeometry","value":{"position":{x:1,y:0,z:0}}}. 
+              - Always populate position with random x, y and z coordinates.
+            - Add multiple: {"action":"addMultiple","value":[{"type":"SphereGeometry","position":{x:1,y:0,z:0}},{"type":"BoxGeometry","position":{x:5,y:0,z:0}}]}
+              - Add three cones: {"action":"addMultiple", "value":[{"type":"ConeGeometry","position":{x:1,y:0,z:0}},{"type":"ConeGeometry","position":{x:5,y:0,z:0}}]}
+            - Move: {"action":"manipulate","actionType":"move","name":"cylinder","value":{x:[user input or left unchanged],y:[user input or left unchanged],z: [user input or left unchanged]}}
             - Select by name: {"action":"select","name":"car"}
             - Search: {"action":"search","value":"car"}
             - List: {"action":"list"}
+            Adhere to the response illustrated in the examples.
             If ambiguous (e.g., "move the cylinder" with multiple cylinders or "select the car" with multiple GLTF models), return {"feedback":"Multiple objects found for [type/name], please specify ID or unique name"}. 
-            Ensure the response is a single valid JSON object with no extra text.`,
+            If object in scene state is populated, you should consider relative positioning of all the objects in the scene state and the user's prompt before generating a response. If necessary, you should use appropriate formulas to calculate the position of new object using the positions of objects in scene state. For example, calculating the location of a new object between two objects to add the new object.
+            Ensure the response is a single valid JSON object with no extra text. Do accomodate synonyms for actions such as insert for add. Understand that '[action] a sphere' is grammatically correct.
+              `,
             },
             {
               role: 'user',
@@ -335,7 +347,7 @@ const deleteObject = (id) => {
       console.log('Complete LLM response:', response.data);
 
       const result = JSON.parse(response.data.message.content);
-      const { action, type, value, targetId, name, feedback } = result;
+      const { action, type, value, targetId, name, feedback, actionType } = result;
       
       if (feedback) {
         setLlmFeedback(feedback);
@@ -350,7 +362,7 @@ const deleteObject = (id) => {
               {
                 id: Date.now().toString(),
                 type,
-                position: value?.position ? [value.position.x, value.position.y, value.position.z] : [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1],
+                position: value != null ? value.position != null ? [value.position.x, value.position.y, value.position.z] : [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1] : [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1],
                 rotation: [0, 0, 0],
                 scale: [1, 1, 1],
                 name: type,
@@ -369,7 +381,7 @@ const deleteObject = (id) => {
               ...value.map((item) => ({
                 id: Date.now().toString() + Math.random(),
                 type: item.type,
-                position: item.position ? [item.position.x, item.position.y, item.position.z] : [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1],
+                position: item.position != null ? [item.position.x, item.position.y, item.position.z] : [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1],
                 rotation: [0, 0, 0],
                 scale: [1, 1, 1],
                 name: item.type,
@@ -385,14 +397,20 @@ const deleteObject = (id) => {
           if (targetId) {
             targetObj = objects.find((obj) => obj.id === targetId);
           } else if (name) {
-            const matchingObjects = objects.filter((obj) => obj.name.toLowerCase() === name.toLowerCase());
+            const matchingObjects = objects.filter((obj) => {
+              console.log(" check ", obj.name)
+              console.log(" check ", name)
+              obj.name.toLowerCase() === name.toLowerCase()
+            } );
             if (matchingObjects.length > 1) {
               setLlmFeedback(`Multiple objects found for ${name}, please specify ID`);
               return;
             }
             targetObj = matchingObjects[0];
+            console.log("Target obj ", targetObj)
           } else if (selectedId) {
             targetObj = objects.find((obj) => obj.id === selectedId);
+            console.log("Target obj ", targetObj)
           }
 
           if (!targetObj) {
@@ -400,9 +418,9 @@ const deleteObject = (id) => {
             return;
           }
 
-          if (['move', 'rotate', 'scale', 'delete'].includes(type)) {
-            if (type === 'delete') {
-              manipulateObject('delete');
+          if (['move', 'rotate', 'scale', 'delete'].includes(actionType)) {
+            if (actionType === 'delete') {
+              deleteObject(targetObj.id);
               setLlmFeedback(`Deleted object ${targetObj.id}`);
             } else {
               setObjects((prev) =>
@@ -413,7 +431,7 @@ const deleteObject = (id) => {
                     rotate: 'rotation',
                     scale: 'scale',
                   };
-                  const prop = propMap[type];
+                  const prop = propMap[actionType];
                   const current = [...obj[prop]]; // Create new array to avoid immutability issues
                   const newValue = value
                     ? [
@@ -422,9 +440,9 @@ const deleteObject = (id) => {
                         value.z !== undefined ? current[2] + value.z : current[2],
                       ]
                     : [
-                        type === 'move' ? current[0] + 0.5 : current[0],
-                        type === 'rotate' ? current[1] + 0.5 : current[1],
-                        type === 'scale' ? current[2] * 1.1 : current[2],
+                        actionType === 'move' ? current[0] + 5 : current[0],
+                        actionType === 'rotate' ? current[1] + 10 : current[1],
+                        actionType === 'scale' ? current[2] * 2 : current[2],
                       ];
                   return {
                     ...obj,
@@ -432,10 +450,10 @@ const deleteObject = (id) => {
                   };
                 })
               );
-              setLlmFeedback(`Performed ${type} on object ${targetObj.name} (ID: ${targetObj.id})`);
+              setLlmFeedback(`Performed ${actionType} on object ${targetObj.name} (ID: ${targetObj.id})`);
             }
           } else {
-            setLlmFeedback('Invalid action: ' + type);
+            setLlmFeedback('Invalid action: ' + actionType);
           }
         break;
         case 'select':
