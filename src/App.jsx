@@ -4,6 +4,7 @@ import ThreeCanvas from './components/Canvas';
 import SKETCHFAB_API_TOKEN from './apiToken';
 import JSZip from 'jszip';
 import axios from 'axios';
+import OpenAI from 'openai';
 
 const shapeOptions = [
   'BoxGeometry',
@@ -115,7 +116,7 @@ const deleteObject = (id) => {
   const [sketchfabResults, setSketchfabResults] = useState([]);
   const [rendering, setRendering] = useState(false);
 
-  const handleSketchfabSearch = async (searchTerm) => {
+  const handleSketchfabSearch = async (searchTerm, didLLM=false) => {
     setLoading(true);
     try {
       const searchRes = await fetch( 
@@ -135,8 +136,12 @@ const deleteObject = (id) => {
       const sortedResults = [...searchData.results].sort(
           (a, b) => (b.likeCount || 0) - (a.likeCount || 0)
       );
-      // Display only the top N (e.g., 10)
-      setSketchfabResults(sortedResults.slice(0, 12));
+      if (didLLM){
+        setSketchfabResults(sortedResults[0])
+      } else {
+        // Display only the top N (e.g., 10)
+        setSketchfabResults(sortedResults.slice(0, 12));
+      }
     } catch (err) {
       alert('Error fetching model from Sketchfab.');
       console.error(err);
@@ -387,7 +392,7 @@ const deleteObject = (id) => {
               ...value.map((item) => ({
                 id: Date.now().toString() + Math.random(),
                 type: item.type,
-                position: item.position != null ? [item.position.x, item.position.y, item.position.z] : [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1],
+                position: item.position !== null ? [item.position.x, item.position.y, item.position.z] : [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1],
                 rotation: [0, 0, 0],
                 scale: [1, 1, 1],
                 name: item.type,
@@ -477,8 +482,10 @@ const deleteObject = (id) => {
           }
           break;
         case 'search':
-          await handleSketchfabSearch(value);
-          setLlmFeedback('Search results fetched.')
+          await handleSketchfabSearch(value, true);
+          await handleAddSketchfabModel(sketchfabResults)
+
+          setLlmFeedback('Displaying the best model.')
           break;
         case 'list':
           if (objects.length === 0) {
