@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import './App.css';
 import ThreeCanvas from './components/Canvas';
-import SKETCHFAB_API_TOKEN from './apiToken';
+import keys from '../apiToken';
 import JSZip from 'jszip';
 import axios from 'axios';
 import OpenAI from 'openai';
@@ -122,7 +122,7 @@ const deleteObject = (id) => {
       const searchRes = await fetch( 
         `https://api.sketchfab.com/v3/search?type=models&q=${encodeURIComponent(searchTerm)}&downloadable=true`, 
         {
-          headers: {'Authorization': `Token ${SKETCHFAB_API_TOKEN}`}
+          headers: {'Authorization': `Token ${keys['sketchFab']}`}
         }
       );
       const searchData = await searchRes.json();
@@ -159,7 +159,7 @@ const deleteObject = (id) => {
       const modelRes = await fetch(
         `https://api.sketchfab.com/v3/models/${model.uid}/download`,
         {
-          headers: { 'Authorization': `Token ${SKETCHFAB_API_TOKEN}` }
+          headers: { 'Authorization': `Token ${keys['sketchFab']}` }
         }
       );
       const modelData = await modelRes.json();
@@ -312,81 +312,13 @@ const deleteObject = (id) => {
       availableActions: ['add', 'addMultiple', 'manipulate', 'color', 'select', 'search', 'list', 'clear', 'deleteMultiple'],
     };
 
-    console.log('Current scene: ', JSON.stringify(sceneState));
+    console.log('Current scene: ', JSON.stringify(sceneState.objects.position));
 
-    const response = await axios.post(
-      'http://localhost:11434/api/chat',
-      {
-        model: 'llama3',
-        messages: [
-          {
-            role: 'system',
-            content: `
-              You are an assistant controlling a 3D scene built with Three.js. The current scene state is: ${JSON.stringify(sceneState)}.
-              Parse the user's command to perform actions like adding shapes, adding multiple shapes, manipulating objects (move, rotate, scale, delete), 
-              changing colors, selecting objects by ID or name, searching Sketchfab, listing objects, clearing all objects, or deleting multiple objects. 
-              When the input contains multiple objects or actions (e.g., 'add a sphere, cube and a car'), split the command based on conjunctions like 'and' and return an array of valid JSON objects, each representing a single action. Ensure every requested object or action is included in the response.
-              Do NOT wrap the response in an "actions" property; return the array or object directly as valid JSON.
-              Each JSON object should contain:
-              - "action": (add, addMultiple, manipulate, color, select, search, list, clear, deleteMultiple)
-              - "type": (shape type like SphereGeometry, required for add/addMultiple)
-              - "actionType": (action type like move, rotate, scale, or delete for manipulate)
-              - "value": (e.g., {position:{x:1,y:0,z:0}}, {color:"red"}, search term, or array of objects for addMultiple)
-              - optional "targetId": (object ID for manipulation/select/color, used only when explicitly specified)
-              - optional "name": (name for selection, manipulation, or deletion, e.g., "car" for GLTF models, "cylinder" for shapes)
-              - optional "targetIds": (array of object IDs for deleteMultiple, used only when IDs are explicitly provided)
-              Examples:
-              - Add: {"action":"add","type":"SphereGeometry","value":{"position":{"x":1,"y":0,"z":0}}}
-                - "Add a tree" should return {"action":"search","value":"tree"}. "Add a battery" should also return a search action {"action":"search","value":"battery"}.
-              - Add multiple: [{"action":"add","type":"SphereGeometry","value":{"position":{"x":1,"y":0,"z":0}}}, {"action":"add","type":"BoxGeometry","value":{"position":{"x":5,"y":0,"z":0}}}]
-              - Move cylinder to x:-5: {"action":"manipulate","actionType":"move","name":"cylinder","value":{"x":-5}}
-              - Rotate leftmost object by 45 degrees: {"action":"manipulate","actionType":"rotate","name":"[name of object with smallest x-coordinate]","value":{"y":0.7854}}
-              - Select by name: {"action":"select","name":"car"}
-              - Search: {"action":"search","value":"car"}
-              - List: {"action":"list"}
-              - Clear all objects: {"action":"clear"}
-              - Delete all cylinders: {"action":"deleteMultiple","name":"CylinderGeometry"}
-              - Delete sphere and cube: [
-                  {"action":"deleteMultiple","name":"SphereGeometry"},
-                  {"action":"deleteMultiple","name":"BoxGeometry"}
-                ]
-              - Add sphere and search tree: [
-                  {"action":"add","type":"SphereGeometry","value":{"position":{"x":1,"y":0,"z":0}}},
-                  {"action":"search","value":"tree"}
-                ]
-              Adhere to the response format illustrated in the examples. For 'add' commands, include a valid position object with x, y, z coordinates (use random values in the range [-2, 2] for x, y and [-1, 3] for z if not specified).
-              Prefer using object names (e.g., "cylinder", "sphere", "car") over IDs for actions like manipulate, select, and deleteMultiple, as names are more user-friendly. Only use "targetId" or "targetIds" when the user explicitly provides IDs (e.g., "delete object id1").
-              If ambiguous (e.g., "delete the cylinder" with multiple cylinders), return {"feedback":"Multiple objects found for [name], please specify ID or select a specific object"}.
-              For commands involving the "leftmost" object, identify the object with the smallest x-coordinate position in the scene state and use its name in the response (e.g., for "rotate the leftmost object by 45 degrees", return a manipulate action with actionType "rotate" and the name of the leftmost object).
-              For "deleteMultiple", use the provided name to delete all objects with that name (e.g., "delete all cylinders" deletes all objects with name "CylinderGeometry").
-              If scene state is populated, consider relative positioning of all objects and the user's prompt to calculate new object positions (e.g., place a new object between two existing objects if specified).
-              Ensure the response is either a single valid JSON object or an array of valid JSON objects with no extra text. Accommodate synonyms like 'insert' for 'add', 'removeAll' for 'clear'. Understand that '[action] a sphere' is grammatically correct.
-            `,
-          },
-          {
-            role: 'user',
-            content: llmInput,
-          },
-        ],
-        format: 'json',
-        stream: false,
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    console.log('Complete LLM response:', response.data);
-
-    // Parse response, handling potential "actions" property
-    let parsedResponse = JSON.parse(response.data.message.content);
-    const results = Array.isArray(parsedResponse)
-      ? parsedResponse
-      : parsedResponse.actions && Array.isArray(parsedResponse.actions)
-      ? parsedResponse.actions
-      : [parsedResponse]; // Wrap single object in array for consistent processing
+    const response = await axios.post('http://localhost:3001/api/llm-command', {
+      llmInput,
+      sceneState,
+    });
+    const results = response.data.results;
 
     // Collect feedback for all commands
     const feedbackMessages = [];
