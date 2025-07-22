@@ -136,11 +136,14 @@ const deleteObject = (id) => {
       const sortedResults = [...searchData.results].sort(
           (a, b) => (b.likeCount || 0) - (a.likeCount || 0)
       );
-      if (didLLM){
-        setSketchfabResults(sortedResults[0])
+      if (didLLM) {
+        if (sortedResults.length > 0) {
+          setSketchfabResults(sortedResults[0]); // Set the best model
+        } else {
+          setSketchfabResults(null); // Set to null if no results
+        }
       } else {
-        // Display only the top N (e.g., 10)
-        setSketchfabResults(sortedResults.slice(0, 12));
+        setSketchfabResults(sortedResults.slice(0, 12)); // Display top 12 for manual search
       }
     } catch (err) {
       alert('Error fetching model from Sketchfab.');
@@ -275,6 +278,14 @@ const deleteObject = (id) => {
   const [llmInput, setLlmInput] = useState('');
   const [llmLoading, setLlmLoading] = useState(false);
   const [llmFeedback, setLlmFeedback] = useState('');
+  const [llmTriggeredSearch, setLlmTriggeredSearch] = useState(false);
+
+  useEffect(() => {
+    if (sketchfabResults && llmTriggeredSearch) {
+      handleAddSketchfabModel(sketchfabResults);
+      setLlmTriggeredSearch(false); // Reset flag
+    }
+  }, [sketchfabResults]);
 
   const handleLlmCommand = async () => {
     if (!llmInput) {
@@ -482,11 +493,14 @@ const deleteObject = (id) => {
           }
           break;
         case 'search':
+         try {
+          setLlmTriggeredSearch(true); // Add this state to track LLM search
           await handleSketchfabSearch(value, true);
-          await handleAddSketchfabModel(sketchfabResults)
-
-          setLlmFeedback('Displaying the best model.')
-          break;
+        } catch (err) {
+          setLlmFeedback('Error during Sketchfab search: ' + err.message);
+          setLlmTriggeredSearch(false);
+        }
+        break;
         case 'list':
           if (objects.length === 0) {
             setLlmFeedback('No objects in the scene.');
@@ -541,12 +555,22 @@ const deleteObject = (id) => {
         <div className="grid">
           {shapeOptions.map((shape) => (
             <button key={shape} 
-            onClick={() => {//console.log('Shape clicked:', shape)
+             style={{
+              background: "transparent",
+              border: 'none',                
+              boxShadow: 'none',   
+              padding: 0,                   
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              width: '6rem',
+            }}
+            onClick={() => {
             addShape(shape)}}>
               <img
                 src={`/assets/${shape.replace('Geometry', '').toLowerCase()}.png`}
                 alt={shape.replace('Geometry', '')}
-                style={{ width: '5rem', height: '5rem', objectFit: 'cover', borderRadius: 8, marginBottom: 4 }}
+                style={{ width: '100%', height: '6rem', objectFit: 'cover', borderRadius: 8, marginBottom: 4 }}
               />
               {shape.replace('Geometry', '')}
             </button>
@@ -583,11 +607,19 @@ const deleteObject = (id) => {
         {sketchfabResults.length > 0 && !rendering && (
           <div>
             <h3>Select a Sketchfab Model:</h3>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1em' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2em' }}>
               {sketchfabResults.map(model => (
                 <button
                   key={model.uid}
-                  style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', cursor: 'pointer' }}
+                  style={{ 
+                    border: 'none',                
+                    boxShadow: 'none',             
+                    padding: 0,                    
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    cursor: 'pointer',  
+                  }}
                   onClick={() => handleAddSketchfabModel(model)}
                 >
                   <img
