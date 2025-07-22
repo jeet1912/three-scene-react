@@ -280,120 +280,157 @@ const deleteObject = (id) => {
   const [llmFeedback, setLlmFeedback] = useState('');
   const [llmTriggeredSearch, setLlmTriggeredSearch] = useState(false);
 
-  useEffect(() => {
-    if (sketchfabResults && llmTriggeredSearch) {
-      handleAddSketchfabModel(sketchfabResults);
-      setLlmTriggeredSearch(false); // Reset flag
-    }
-  }, [sketchfabResults]);
+ useEffect(() => {
+  if (sketchfabResults && llmTriggeredSearch) {
+    handleAddSketchfabModel(sketchfabResults);
+    setLlmFeedback((prev) => prev + '. Added the best model to the scene');
+    setLlmTriggeredSearch(false);
+  }}, [sketchfabResults, llmTriggeredSearch]);
 
-  const handleLlmCommand = async () => {
-    if (!llmInput) {
-      setLlmFeedback('Please enter a command.');
-      return;
-    }
-  
-    try {
-      setLlmLoading(true);
-      setLlmFeedback('Processing command...');
-      // Construct scene state
-      const sceneState = {
-        objects: objects.map(({ id, type, position, rotation, scale, name}) => ({
-          id,
-          type,
-          position: [...position], 
-          rotation: [...rotation],
-          scale: [...scale],
-          name: name || type
-        })),
-        selectedId,
-        availableShapes: shapeOptions.map((s) => s.replace('Geometry', '')),
-        availableActions: ['add','addMultiple', 'move', 'rotate', 'scale', 'delete', 'select', 'list', 'search'],
-      };
+ const handleLlmCommand = async () => {
+  if (!llmInput) {
+    setLlmFeedback('Please enter a command.');
+    return;
+  }
 
-      console.log('Current scene : ', JSON.stringify(sceneState))
+  try {
+    setLlmLoading(true);
+    setLlmFeedback('Processing command...');
 
-      const response = await axios.post(
-        'http://localhost:11434/api/chat',
-        {
-          model: 'llama3',
-          messages: [
-            {
-              role: 'system',
-              content: `
+    // Construct scene state
+    const sceneState = {
+      objects: objects.map(({ id, type, position, rotation, scale, name }) => ({
+        id,
+        type,
+        position: [...position],
+        rotation: [...rotation],
+        scale: [...scale],
+        name: name || type,
+      })),
+      selectedId,
+      availableShapes: shapeOptions.map((s) => s.replace('Geometry', '')),
+      availableActions: ['add', 'addMultiple', 'manipulate', 'color', 'select', 'search', 'list', 'clear', 'deleteMultiple'],
+    };
+
+    console.log('Current scene: ', JSON.stringify(sceneState));
+
+    const response = await axios.post(
+      'http://localhost:11434/api/chat',
+      {
+        model: 'llama3',
+        messages: [
+          {
+            role: 'system',
+            content: `
               You are an assistant controlling a 3D scene built with Three.js. The current scene state is: ${JSON.stringify(sceneState)}.
-            Parse the user's command to perform actions like adding shapes, adding multiple shapes, manipulating objects (move, rotate, scale, delete), 
-            changing colors, selecting objects by ID or name, searching Sketchfab, or listing objects. Respond with a single valid JSON object containing:
-            - "action": (add, addMultiple, manipulate, color, select, search, list)
-            - "type": (shape type like Sphere)
-            - "actionType" : (action type like move, rotate, scale or color)
-            - "value": (e.g., {position:{x:1,y:0,z:0}}, {color:"red"}, search term, or array of objects for addMultiple)
-            - optional "targetId": (object ID for manipulation/select/color)
-            - optional "name": (name for selection or manipulation, e.g., "car" for GLTF models, "cylinder" for shapes)
-            Examples:
-            - Add: {"action":"add","type":"SphereGeometry","value":{"position":{x:1,y:0,z:0}}}.
-              - Adhere to the format of the output required for Add command. 
-              - You should generate a json object with action, type and value properties, including sub properties such as position for value, which should have random numbers for x, y and z.
-            - Add multiple: {"action":"addMultiple","value":[{"type":"SphereGeometry","position":{x:1,y:0,z:0}},{"type":"BoxGeometry","position":{x:5,y:0,z:0}}]}
-              - Add two cones: {"action":"addMultiple", "value":[{"type":"ConeGeometry","position":{x:1,y:0,z:0}},{"type":"ConeGeometry","position":{x:5,y:0,z:0}}]}
-            - Move cylinder to x:-5 : {"action":"manipulate","actionType":"move","name":"cylinder","value":{x:-5, y:[left unchanged],z:[left unchanged]}}
-            - Select by name: {"action":"select","name":"car"}
-            - Search: {"action":"search","value":"car"}
-            - List: {"action":"list"}
-            Adhere to the response illustrated in the examples.
-            If ambiguous (e.g., "move the cylinder" with multiple cylinders or "select the car" with multiple GLTF models), return {"feedback":"Multiple objects found for [type/name], please specify ID or unique name"}. 
-            If object in scene state is populated, you should consider relative positioning of all the objects in the scene state and the user's prompt before generating a response. If necessary, you should use appropriate formulas to calculate the position of new object using the positions of objects in scene state. For example, calculating the location of a new object between two objects to add the new object.
-            Ensure the response is a single valid JSON object with no extra text. Do accomodate synonyms for actions such as insert for add. Understand that '[action] a sphere' is grammatically correct.
-              `,
-            },
-            {
-              role: 'user',
-              content: llmInput,
-            },
-          ],
-          format: 'json', // Enforce JSON response
-          stream: false, // Disable streaming for single JSON response
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
+              Parse the user's command to perform actions like adding shapes, adding multiple shapes, manipulating objects (move, rotate, scale, delete), 
+              changing colors, selecting objects by ID or name, searching Sketchfab, listing objects, clearing all objects, or deleting multiple objects. 
+              When the input contains multiple objects or actions (e.g., 'add a sphere, cube and a car'), split the command based on conjunctions like 'and' and return an array of valid JSON objects, each representing a single action. Ensure every requested object or action is included in the response.
+              Do NOT wrap the response in an "actions" property; return the array or object directly as valid JSON.
+              Each JSON object should contain:
+              - "action": (add, addMultiple, manipulate, color, select, search, list, clear, deleteMultiple)
+              - "type": (shape type like SphereGeometry, required for add/addMultiple)
+              - "actionType": (action type like move, rotate, scale, or delete for manipulate)
+              - "value": (e.g., {position:{x:1,y:0,z:0}}, {color:"red"}, search term, or array of objects for addMultiple)
+              - optional "targetId": (object ID for manipulation/select/color, used only when explicitly specified)
+              - optional "name": (name for selection, manipulation, or deletion, e.g., "car" for GLTF models, "cylinder" for shapes)
+              - optional "targetIds": (array of object IDs for deleteMultiple, used only when IDs are explicitly provided)
+              Examples:
+              - Add: {"action":"add","type":"SphereGeometry","value":{"position":{"x":1,"y":0,"z":0}}}
+                - "Add a tree" should return {"action":"search","value":"tree"}. "Add a battery" should also return a search action {"action":"search","value":"battery"}.
+              - Add multiple: [{"action":"add","type":"SphereGeometry","value":{"position":{"x":1,"y":0,"z":0}}}, {"action":"add","type":"BoxGeometry","value":{"position":{"x":5,"y":0,"z":0}}}]
+              - Move cylinder to x:-5: {"action":"manipulate","actionType":"move","name":"cylinder","value":{"x":-5}}
+              - Rotate leftmost object by 45 degrees: {"action":"manipulate","actionType":"rotate","name":"[name of object with smallest x-coordinate]","value":{"y":0.7854}}
+              - Select by name: {"action":"select","name":"car"}
+              - Search: {"action":"search","value":"car"}
+              - List: {"action":"list"}
+              - Clear all objects: {"action":"clear"}
+              - Delete all cylinders: {"action":"deleteMultiple","name":"CylinderGeometry"}
+              - Delete sphere and cube: [
+                  {"action":"deleteMultiple","name":"SphereGeometry"},
+                  {"action":"deleteMultiple","name":"BoxGeometry"}
+                ]
+              - Add sphere and search tree: [
+                  {"action":"add","type":"SphereGeometry","value":{"position":{"x":1,"y":0,"z":0}}},
+                  {"action":"search","value":"tree"}
+                ]
+              Adhere to the response format illustrated in the examples. For 'add' commands, include a valid position object with x, y, z coordinates (use random values in the range [-2, 2] for x, y and [-1, 3] for z if not specified).
+              Prefer using object names (e.g., "cylinder", "sphere", "car") over IDs for actions like manipulate, select, and deleteMultiple, as names are more user-friendly. Only use "targetId" or "targetIds" when the user explicitly provides IDs (e.g., "delete object id1").
+              If ambiguous (e.g., "delete the cylinder" with multiple cylinders), return {"feedback":"Multiple objects found for [name], please specify ID or select a specific object"}.
+              For commands involving the "leftmost" object, identify the object with the smallest x-coordinate position in the scene state and use its name in the response (e.g., for "rotate the leftmost object by 45 degrees", return a manipulate action with actionType "rotate" and the name of the leftmost object).
+              For "deleteMultiple", use the provided name to delete all objects with that name (e.g., "delete all cylinders" deletes all objects with name "CylinderGeometry").
+              If scene state is populated, consider relative positioning of all objects and the user's prompt to calculate new object positions (e.g., place a new object between two existing objects if specified).
+              Ensure the response is either a single valid JSON object or an array of valid JSON objects with no extra text. Accommodate synonyms like 'insert' for 'add', 'removeAll' for 'clear'. Understand that '[action] a sphere' is grammatically correct.
+            `,
           },
-        }
-      );
+          {
+            role: 'user',
+            content: llmInput,
+          },
+        ],
+        format: 'json',
+        stream: false,
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
 
-      console.log('Complete LLM response:', response.data);
+    console.log('Complete LLM response:', response.data);
 
-      const result = JSON.parse(response.data.message.content);
-      const { action, type, value, targetId, name, feedback, actionType } = result;
-      
+    // Parse response, handling potential "actions" property
+    let parsedResponse = JSON.parse(response.data.message.content);
+    const results = Array.isArray(parsedResponse)
+      ? parsedResponse
+      : parsedResponse.actions && Array.isArray(parsedResponse.actions)
+      ? parsedResponse.actions
+      : [parsedResponse]; // Wrap single object in array for consistent processing
+
+    // Collect feedback for all commands
+    const feedbackMessages = [];
+
+    // Process each command sequentially
+    for (const result of results) {
+      const { action, type, value, targetId, name, feedback, actionType, targetIds } = result;
+
       if (feedback) {
-        setLlmFeedback(feedback);
-        return;
+        feedbackMessages.push(feedback);
+        continue; // Skip to next command if feedback indicates ambiguity
+      }
+
+      if (!action) {
+        feedbackMessages.push('Invalid command: action is undefined');
+        continue;
       }
 
       switch (action) {
         case 'add':
           if (shapeOptions.includes(type)) {
+            const isValidPosition =
+              value &&
+              value.position &&
+              typeof value.position.x === 'number' &&
+              typeof value.position.y === 'number' &&
+              typeof value.position.z === 'number';
             setObjects((prev) => [
               ...prev,
               {
                 id: Date.now().toString(),
                 type,
-                position: value && value.position &&
-                          typeof value.position.x === 'number' &&
-                          typeof value.position.y === 'number' &&
-                          typeof value.position.z === 'number'
-                            ? [value.position.x, value.position.y, value.position.z]
-                            : [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1],
+                position: isValidPosition
+                  ? [value.position.x, value.position.y, value.position.z]
+                  : [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1],
                 rotation: [0, 0, 0],
                 scale: [1, 1, 1],
                 name: type,
                 color: value?.color || '#f5f5dc',
               },
             ]);
-            setLlmFeedback(`Added ${type}`);
+            feedbackMessages.push(`Added ${type.replace('Geometry', '')}`);
           } else {
-            setLlmFeedback(`Invalid shape: ${type}. Available: ${shapeOptions.join(', ')}`);
+            feedbackMessages.push(`Invalid shape: ${type}. Available: ${shapeOptions.map(s => s.replace('Geometry', '')).join(', ')}`);
           }
           break;
         case 'addMultiple':
@@ -403,42 +440,45 @@ const deleteObject = (id) => {
               ...value.map((item) => ({
                 id: Date.now().toString() + Math.random(),
                 type: item.type,
-                position: item.position !== null ? [item.position.x, item.position.y, item.position.z] : [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1],
+                position:
+                  item.position &&
+                  typeof item.position.x === 'number' &&
+                  typeof item.position.y === 'number' &&
+                  typeof item.position.z === 'number'
+                  ? [item.position.x, item.position.y, item.position.z]
+                  : [Math.random() * 4 - 2, Math.random() * 4 - 2, Math.random() * 3 - 1],
                 rotation: [0, 0, 0],
                 scale: [1, 1, 1],
                 name: item.type,
               })),
             ]);
-            setLlmFeedback(`Added ${value.length} objects`);
+            feedbackMessages.push(`Added ${value.length} objects`);
           } else {
-            setLlmFeedback(`Invalid types in addMultiple. Available: ${shapeOptions.join(', ')}`);
+            feedbackMessages.push(`Invalid types in addMultiple. Available: ${shapeOptions.map(s => s.replace('Geometry', '')).join(', ')}`);
           }
-          break;  
+          break;
         case 'manipulate':
           let targetObj;
           if (targetId) {
             targetObj = objects.find((obj) => obj.id === targetId);
           } else if (name) {
-          const matchingObjects = objects.filter((obj) => obj.name.toLowerCase() === name.toLowerCase());
+            const matchingObjects = objects.filter((obj) => obj.name.toLowerCase() === name.toLowerCase());
             if (matchingObjects.length > 1) {
-              setLlmFeedback(`Multiple objects found for ${name}, please specify ID`);
-              return;
+              feedbackMessages.push(`Multiple objects found for ${name}, please specify ID or select a specific object`);
+              continue;
             }
-            console.log("Matching objects ", matchingObjects);
             targetObj = matchingObjects[0];
           } else if (selectedId) {
             targetObj = objects.find((obj) => obj.id === selectedId);
           }
-            console.log("Target obj ", targetObj)
           if (!targetObj) {
-            setLlmFeedback('No object selected for manipulation.');
-            return;
+            feedbackMessages.push('No object selected for manipulation');
+            continue;
           }
-
           if (['move', 'rotate', 'scale', 'delete'].includes(actionType)) {
             if (actionType === 'delete') {
               deleteObject(targetObj.id);
-              setLlmFeedback(`Deleted object ${targetObj.id}`);
+              feedbackMessages.push(`Deleted ${targetObj.name.replace('Geometry', '')} (ID: ${targetObj.id})`);
             } else {
               setObjects((prev) =>
                 prev.map((obj) => {
@@ -449,16 +489,16 @@ const deleteObject = (id) => {
                     scale: 'scale',
                   };
                   const prop = propMap[actionType];
-                  const current = [...obj[prop]]; // Create new array to avoid immutability issues
+                  const current = [...obj[prop]];
                   const newValue = value
                     ? [
-                        value.x !== undefined ? current[0] + value.x : current[0],
-                        value.y !== undefined ? current[1] + value.y : current[1],
-                        value.z !== undefined ? current[2] + value.z : current[2],
+                        value.x !== undefined ? parseFloat(value.x) : current[0],
+                        value.y !== undefined ? parseFloat(value.y) : current[1],
+                        value.z !== undefined ? parseFloat(value.z) : current[2],
                       ]
                     : [
                         actionType === 'move' ? current[0] + 5 : current[0],
-                        actionType === 'rotate' ? current[1] + 10 : current[1],
+                        actionType === 'rotate' ? current[1] + 0.7854 : current[1], // Default 45 degrees
                         actionType === 'scale' ? current[2] * 2 : current[2],
                       ];
                   return {
@@ -467,45 +507,46 @@ const deleteObject = (id) => {
                   };
                 })
               );
-              setLlmFeedback(`Performed ${actionType} on object ${targetObj.name} (ID: ${targetObj.id})`);
+              feedbackMessages.push(`Performed ${actionType} on ${targetObj.name.replace('Geometry', '')} (ID: ${targetObj.id})`);
             }
           } else {
-            setLlmFeedback('Invalid action: ' + actionType);
+            feedbackMessages.push(`Invalid action: ${actionType}`);
           }
-        break;
+          break;
         case 'select':
           let selectObj;
           if (targetId) {
-              selectObj = objects.find((obj) => obj.id === targetId);
-            } else if (name) {
-              const matchingObjects = objects.filter((obj) => obj.name.toLowerCase() === name.toLowerCase());
-              if (matchingObjects.length > 1) {
-                setLlmFeedback(`Multiple objects found for ${name}, please specify ID`);
-                return;
-              }
-              selectObj = matchingObjects[0];
+            selectObj = objects.find((obj) => obj.id === targetId);
+          } else if (name) {
+            const matchingObjects = objects.filter((obj) => obj.name.toLowerCase() === name.toLowerCase());
+            if (matchingObjects.length > 1) {
+              feedbackMessages.push(`Multiple objects found for ${name}, please specify ID or select a specific object`);
+              continue;
             }
+            selectObj = matchingObjects[0];
+          }
           if (selectObj) {
             setSelectedId(selectObj.id);
-            setLlmFeedback(`Selected object (ID: ${selectObj.id})`);
+            feedbackMessages.push(`Selected ${selectObj.name.replace('Geometry', '')} (ID: ${selectObj.id})`);
           } else {
-            setLlmFeedback(`Object not found: ${targetId || name}`);
+            feedbackMessages.push(`Object not found: ${targetId || name}`);
           }
           break;
         case 'search':
-         try {
-          setLlmTriggeredSearch(true); // Add this state to track LLM search
-          await handleSketchfabSearch(value, true);
-        } catch (err) {
-          setLlmFeedback('Error during Sketchfab search: ' + err.message);
-          setLlmTriggeredSearch(false);
-        }
-        break;
+          try {
+            setLlmTriggeredSearch(true);
+            await handleSketchfabSearch(value, true);
+            feedbackMessages.push(`Searched for ${value}`);
+          } catch (err) {
+            feedbackMessages.push(`Error during Sketchfab search: ${err.message}`);
+            setLlmTriggeredSearch(false);
+          }
+          break;
         case 'list':
           if (objects.length === 0) {
-            setLlmFeedback('No objects in the scene.');
+            feedbackMessages.push('No objects in the scene');
           } else {
-            setLlmFeedback(
+            feedbackMessages.push(
               'Objects in scene: ' +
                 objects
                   .map((obj) => `${obj.name || obj.type.replace('Geometry', '')} (ID: ${obj.id})`)
@@ -513,9 +554,48 @@ const deleteObject = (id) => {
             );
           }
           break;
+        case 'clear':
+          if (objects.length === 0) {
+            feedbackMessages.push('The scene is already empty');
+            continue;
+          }
+          setObjects((prev) => {
+            prev.forEach((obj) => deleteObject(obj.id));
+            return [];
+          });
+          feedbackMessages.push('All objects have been removed from the scene');
+          break;
+        case 'deleteMultiple':
+          if (!targetIds && !name) {
+            feedbackMessages.push('No target IDs or name provided for deleteMultiple');
+            continue;
+          }
+          setObjects((prev) => {
+            const toDelete = targetIds
+              ? prev.filter((obj) => targetIds.includes(obj.id))
+              : name
+              ? prev.filter((obj) => obj.name.toLowerCase() === name.toLowerCase())
+              : [];
+            if (toDelete.length === 0) {
+              feedbackMessages.push(`No objects found with name ${name} or IDs ${targetIds?.join(', ') || 'none'}`);
+              return prev;
+            }
+            toDelete.forEach((obj) => deleteObject(obj.id));
+            feedbackMessages.push(`Deleted ${toDelete.length} ${name ? name.replace('Geometry', '') : 'objects'}${targetIds ? ` (IDs: ${targetIds.join(', ')})` : ''}`);
+            return targetIds
+              ? prev.filter((obj) => !targetIds.includes(obj.id))
+              : name
+              ? prev.filter((obj) => obj.name.toLowerCase() !== name.toLowerCase())
+              : prev;
+          });
+          break;
         default:
-          setLlmFeedback('Unknown command: ' + action);
+          feedbackMessages.push(`Unknown command: ${action}`);
       }
+    }
+
+    // Set final feedback by joining all messages
+    setLlmFeedback(feedbackMessages.join('. '));
     } catch (err) {
       setLlmFeedback('Error processing command: ' + err.message);
       console.error('LLM error:', err);
@@ -524,6 +604,7 @@ const deleteObject = (id) => {
       setLlmInput('');
     }
   };
+
 
   const bottomRef = useRef(null);
   useEffect(() => {
