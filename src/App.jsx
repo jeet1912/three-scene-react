@@ -126,7 +126,7 @@ const deleteObject = (id) => {
         }
       );
       const searchData = await searchRes.json();
-      //console.log('Search data ', searchData)
+      console.log('Search data ', searchData)
       // After fetching and checking results
       if (!searchData.results || searchData.results.length === 0) {
         alert('No downloadable models found for this search.');
@@ -154,6 +154,7 @@ const deleteObject = (id) => {
   }
 
   const handleAddSketchfabModel = async (model) => {
+    console.log("Which model is here? ", model.uid)
     setRendering(true);
     try{
       const modelRes = await fetch(
@@ -319,7 +320,7 @@ const deleteObject = (id) => {
       sceneState,
     });
     const results = response.data.results;
-
+    console.log('LLM results ',results)
     // Collect feedback for all commands
     const feedbackMessages = [];
 
@@ -466,10 +467,11 @@ const deleteObject = (id) => {
           break;
         case 'search':
           try {
-            setLlmTriggeredSearch(true);
             await handleSketchfabSearch(value, true);
+            setLlmTriggeredSearch(true);
             feedbackMessages.push(`Searched for ${value}`);
           } catch (err) {
+            console.error('Search error details:', err); 
             feedbackMessages.push(`Error during Sketchfab search: ${err.message}`);
             setLlmTriggeredSearch(false);
           }
